@@ -2,7 +2,8 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
-import HomePage from "../screens/Home/HomePage";
+import { HomePage } from "../screens/Home";
+import AppointmentStackNavigator from "./stacks/AppointmentStackNavigator";
 // import CoursesScreen from "../screens/courses/CoursesScreen";
 // import SurveysScreen from "../screens/surveys/SurveysScreen";
 // import ProfileScreen from "../screens/profile/ProfileScreen";
@@ -19,6 +20,9 @@ const MainTabNavigator = () => {
           switch (route.name) {
             case "Home":
               iconName = focused ? "home" : "home-outline";
+              break;
+            case "Appointments":
+              iconName = focused ? "calendar" : "calendar-outline";
               break;
             case "Courses":
               iconName = focused ? "book" : "book-outline";
@@ -41,6 +45,7 @@ const MainTabNavigator = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomePage} />
+      <Tab.Screen name="Appointments" component={AppointmentStackNavigator} />
       {/* <Tab.Screen name="Courses" component={CoursesScreen} />
       <Tab.Screen name="Surveys" component={SurveysScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} /> */}

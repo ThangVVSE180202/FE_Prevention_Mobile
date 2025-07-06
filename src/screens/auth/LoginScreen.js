@@ -39,7 +39,14 @@ const LoginScreen = () => {
 
       if (data.status === "success") {
         const user = data.data.user;
-        login(user); // Lưu vào context
+        const token = data.token; // <-- FIX: get token from top-level
+
+        if (!token) {
+          Alert.alert("Lỗi", "Không nhận được token từ server");
+          return;
+        }
+
+        await login(user, token); // Lưu cả user và token vào context
 
         navigation.dispatch(
           CommonActions.reset({
