@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,23 +7,35 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
+import { useAuth } from "../../context/AuthContext";
+
 
 import DrugFreeLogo from "../../../assets/images/DrugFreeLogo.png";
-const Header = ({ user, onLogout }) => {
+
+const Header = () => {
   const navigation = useNavigation();
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = useState("");
+  const { user, logout } = useAuth();
 
   const handleSearch = () => {
     if (search.trim()) {
       console.log("Searching for:", search);
-      // navigation.navigate("SearchScreen", { query: search });
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: "Auth" }],
+      })
+    );
   };
 
   return (
     <View style={styles.container}>
-      {/* Logo + Title */}
       <TouchableOpacity
         style={styles.logoContainer}
         onPress={() => navigation.navigate("Home")}
@@ -32,7 +44,6 @@ const Header = ({ user, onLogout }) => {
         <Text style={styles.title}>DrugFree</Text>
       </TouchableOpacity>
 
-      {/* Navigation links (dạng text touch) */}
       <View style={styles.navLinks}>
         <TouchableOpacity onPress={() => navigation.navigate("Courses")}>
           <Text style={styles.link}>Khóa học</Text>
@@ -51,7 +62,6 @@ const Header = ({ user, onLogout }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Search + User */}
       <View style={styles.rightSection}>
         <View style={styles.searchBox}>
           <TextInput
@@ -70,7 +80,7 @@ const Header = ({ user, onLogout }) => {
             <Text style={styles.welcomeText}>
               Chào, {user.name || user.email}
             </Text>
-            <TouchableOpacity onPress={onLogout}>
+            <TouchableOpacity onPress={handleLogout}>
               <Text style={styles.logoutBtn}>Đăng xuất</Text>
             </TouchableOpacity>
           </>
@@ -93,12 +103,12 @@ export default Header;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#1565c0", // màu xanh đậm hơn một chút
+    backgroundColor: "#1565c0",
     paddingVertical: 12,
     paddingHorizontal: 16,
     flexDirection: "column",
     alignItems: "center",
-    gap: 8, // thêm khoảng cách giữa các section
+    gap: 8,
   },
   logoContainer: {
     flexDirection: "row",
@@ -141,7 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
     height: 38,
-    elevation: 2, // bóng nhẹ
+    elevation: 2,
   },
   input: {
     height: 36,

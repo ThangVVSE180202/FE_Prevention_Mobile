@@ -2,11 +2,10 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
-// Import các màn hình chính
 import HomePage from "../screens/Home/HomePage";
-// import ProfileScreen from "../screens/profile/ProfileScreen";
 // import CoursesScreen from "../screens/courses/CoursesScreen";
 // import SurveysScreen from "../screens/surveys/SurveysScreen";
+// import ProfileScreen from "../screens/profile/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -17,7 +16,6 @@ const MainTabNavigator = () => {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-
           switch (route.name) {
             case "Home":
               iconName = focused ? "home" : "home-outline";
@@ -32,7 +30,7 @@ const MainTabNavigator = () => {
               iconName = focused ? "person" : "person-outline";
               break;
             default:
-              iconName = "alert-circle-outline";
+              iconName = "help-circle-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;

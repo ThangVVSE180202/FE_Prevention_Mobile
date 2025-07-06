@@ -1,22 +1,29 @@
-// src/navigation/AppNavigator.js
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
 import AuthNavigator from "./AuthNavigator";
 import MainTabNavigator from "./MainTabNavigator";
+
+const RootStack = createNativeStackNavigator();
 
 const AppNavigator = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // TODO: Check token here
+    // TODO: kiểm tra token AsyncStorage ở đây
     setTimeout(() => {
-      setIsLoggedIn(false); // set true để test MainTabNavigator
+      setIsLoggedIn(false); // or true to test
     }, 1000);
   }, []);
 
   return (
     <NavigationContainer>
-      {isLoggedIn ? <MainTabNavigator /> : <AuthNavigator />}
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {/* Luôn khai báo cả 2 màn hình */}
+        <RootStack.Screen name="Auth" component={AuthNavigator} />
+        <RootStack.Screen name="Main" component={MainTabNavigator} />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 };
