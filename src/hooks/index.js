@@ -4,12 +4,12 @@
 // Example hook files that should be created here:
 // - useApi.js - API calling hook
 // - useAuth.js - Authentication hook
-// - useLocalStorage.js - Local storage hook
+// - useAsyncStorage.js - AsyncStorage hook for React Native
 // - usePermissions.js - Permission checking hook
 // - usePagination.js - Pagination hook
 
 export { default as useApi } from "./useApi";
 export { default as useAuth } from "./useAuth";
-export { default as useLocalStorage } from "./useLocalStorage";
+export { default as useAsyncStorage } from "./useAsyncStorage";
 export { default as usePermissions } from "./usePermissions";
 export { default as usePagination } from "./usePagination";
