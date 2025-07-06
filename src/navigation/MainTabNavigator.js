@@ -1,0 +1,53 @@
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
+
+// Import các màn hình chính
+import HomePage from "../screens/Home/HomePage";
+// import ProfileScreen from "../screens/profile/ProfileScreen";
+// import CoursesScreen from "../screens/courses/CoursesScreen";
+// import SurveysScreen from "../screens/surveys/SurveysScreen";
+
+const Tab = createBottomTabNavigator();
+
+const MainTabNavigator = () => {
+  return (
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+
+          switch (route.name) {
+            case "Home":
+              iconName = focused ? "home" : "home-outline";
+              break;
+            case "Courses":
+              iconName = focused ? "book" : "book-outline";
+              break;
+            case "Surveys":
+              iconName = focused ? "list" : "list-outline";
+              break;
+            case "Profile":
+              iconName = focused ? "person" : "person-outline";
+              break;
+            default:
+              iconName = "alert-circle-outline";
+          }
+
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: "#1976d2",
+        tabBarInactiveTintColor: "gray",
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Home" component={HomePage} />
+      {/* <Tab.Screen name="Courses" component={CoursesScreen} />
+      <Tab.Screen name="Surveys" component={SurveysScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} /> */}
+    </Tab.Navigator>
+  );
+};
+
+export default MainTabNavigator;

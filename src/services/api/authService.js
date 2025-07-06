@@ -2,6 +2,7 @@
 // Handles all authentication-related API calls
 
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 class AuthService {
   // Helper method for making API requests
@@ -71,43 +72,52 @@ class AuthService {
   }
 
   // Helper methods for token management
-  storeAuthData(token, user) {
-    // For React Native, you might want to use AsyncStorage instead
-    if (typeof Storage !== "undefined") {
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+
+  async storeAuthData(token, user) {
+    try {
+      await AsyncStorage.setItem("token", token);
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+    } catch (e) {
+      // handle error
+      console.error("Failed to store auth data", e);
     }
   }
 
-  getToken() {
-    if (typeof Storage !== "undefined") {
-      return localStorage.getItem("token");
+  async getToken() {
+    try {
+      return await AsyncStorage.getItem("token");
+    } catch (e) {
+      return null;
     }
-    return null;
   }
 
-  getCurrentUser() {
-    if (typeof Storage !== "undefined") {
-      const userStr = localStorage.getItem("user");
+  async getCurrentUser() {
+    try {
+      const userStr = await AsyncStorage.getItem("user");
       return userStr ? JSON.parse(userStr) : null;
+    } catch (e) {
+      return null;
     }
-    return null;
   }
 
-  isAuthenticated() {
-    return !!this.getToken();
+  async isAuthenticated() {
+    const token = await this.getToken();
+    return !!token;
   }
 
-  logout() {
-    if (typeof Storage !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+  async logout() {
+    try {
+      await AsyncStorage.removeItem("token");
+      await AsyncStorage.removeItem("user");
+    } catch (e) {
+      // handle error
+      console.error("Failed to remove auth data", e);
     }
   }
 
   // Make authenticated requests
   async authenticatedRequest(endpoint, options = {}) {
-    const token = this.getToken();
+    const token = await this.getToken();
 
     if (!token) {
       throw new Error("No authentication token found");
