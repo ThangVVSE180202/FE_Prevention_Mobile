@@ -1,5 +1,12 @@
 // 📰 Blog Service
 // Handles all blog and content-related API calls
+//
+// ✅ AVAILABLE ENDPOINTS (from API guide):
+// - GET /blogs - Get list of blogs (Public)
+// - GET /blogs/:id - Get blog details (Public)
+//
+// ❌ UNAVAILABLE/COMMENTED ENDPOINTS:
+// - /blogs/categories - Get blog categories (not in API guide)
 
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 
@@ -124,12 +131,13 @@ class BlogService {
       : excerpt + "...";
   }
 
-  // Get blog categories (if endpoint exists)
-  async getBlogCategories() {
-    return this.makeRequest("/blogs/categories", {
-      method: HTTP_METHODS.GET,
-    });
-  }
+  // ❌ COMMENTED OUT: This endpoint is not documented in the API guide
+  // Get blog categories (NOT AVAILABLE in current API guide)
+  // async getBlogCategories() {
+  //   return this.makeRequest("/blogs/categories", {
+  //     method: HTTP_METHODS.GET,
+  //   });
+  // }
 
   // Share blog functionality
   generateShareData(blog) {
