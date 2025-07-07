@@ -22,12 +22,21 @@ const ConsultantListScreen = ({ navigation }) => {
     fetchConsultants();
   }, []);
 
+  // ❌ FEATURE LIMITED: Members cannot access full consultant list per API guide
+  // The /users?role=consultant endpoint requires admin permissions
   const fetchConsultants = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await userService.getConsultants();
-      setConsultants(response.data.data || []);
+
+      // Show message that this feature requires a different approach
+      setError(
+        "Tính năng xem danh sách chuyên viên yêu cầu quyền admin. Vui lòng sử dụng ID chuyên viên cụ thể để đặt lịch."
+      );
+      setConsultants([]);
+
+      // Alternative: You could show a hardcoded list of known consultant IDs
+      // or implement a different approach for discovering consultants
     } catch (err) {
       setError(err.message);
       Alert.alert("Lỗi", "Không thể tải danh sách chuyên viên tư vấn");

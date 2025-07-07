@@ -68,6 +68,8 @@ const AppointmentStackNavigator = () => {
         component={AppointmentDetailScreen}
         options={{ title: "Appointment Details" }}
       />
+      {/* ⚠️ NOTE: MyAppointments screen has limited functionality 
+          due to unavailable API endpoints for listing/managing appointments */}
       <Stack.Screen
         name="MyAppointments"
         component={MyAppointmentsScreen}

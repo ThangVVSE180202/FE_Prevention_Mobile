@@ -1,5 +1,16 @@
 // 📅 Appointment Service
 // Handles all appointment booking and management API calls
+//
+// ✅ AVAILABLE ENDPOINTS (from API guide):
+// - POST /appointment-slots/my-slots - Create time slots (Consultant only)
+// - GET /appointment-slots/consultant/:id - Get consultant's available slots
+// - PATCH /appointment-slots/:slotId/book - Book appointment slot (Member only)
+//
+// ❌ UNAVAILABLE/COMMENTED ENDPOINTS:
+// - /appointments/my-appointments - Get user's appointments (not in API guide)
+// - /appointments/consultant-appointments - Get consultant's appointments (not in API guide)
+// - /appointments/:id/cancel - Cancel appointment (not in API guide)
+// - /users?role=consultant - Get consultants (requires admin permissions)
 
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 import authService from "./authService";
@@ -59,38 +70,33 @@ class AppointmentService {
     );
   }
 
-  // Get user's appointments (if endpoint exists)
-  async getMyAppointments() {
-    return authService.authenticatedRequest("/appointments/my-appointments", {
-      method: HTTP_METHODS.GET,
-    });
-  }
-
-  // Get consultant's appointments (if endpoint exists)
-  async getConsultantAppointments() {
-    return authService.authenticatedRequest(
-      "/appointments/consultant-appointments",
-      {
-        method: HTTP_METHODS.GET,
-      }
-    );
-  }
-
-  // Cancel appointment (if endpoint exists)
-  async cancelAppointment(appointmentId) {
-    return authService.authenticatedRequest(
-      `/appointments/${appointmentId}/cancel`,
-      {
-        method: HTTP_METHODS.PATCH,
-      }
-    );
-  }
-
-  // Get all consultants (if endpoint exists)
-  async getConsultants() {
-    return this.makeRequest("/users?role=consultant", {
-      method: HTTP_METHODS.GET,
-    });
+  // ✅ AVAILABLE FEATURES vs ❌ UNAVAILABLE FEATURES
+  getFeatureStatus() {
+    return {
+      available: {
+        createTimeSlots: "Consultant can create time slots",
+        getConsultantSlots: "Anyone can view consultant's available slots",
+        bookAppointmentSlot: "Members can book available slots",
+        formatTimeSlot: "Helper methods for time formatting",
+        validateTimeSlot: "Client-side validation helpers",
+      },
+      unavailable: {
+        getMyAppointments:
+          "API endpoint /appointments/my-appointments not available",
+        getConsultantAppointments:
+          "API endpoint /appointments/consultant-appointments not available",
+        cancelAppointment:
+          "API endpoint /appointments/:id/cancel not available",
+        getConsultants:
+          "Endpoint /users?role=consultant requires admin permissions",
+      },
+      recommendations: [
+        "For listing appointments: Backend team needs to implement appointment list endpoints",
+        "For canceling appointments: Backend team needs to implement cancel endpoint",
+        "For consultant discovery: Consider implementing a public consultant directory endpoint",
+        "Current workflow: Members must know specific consultant IDs to book appointments",
+      ],
+    };
   }
 
   // Format time slot for display

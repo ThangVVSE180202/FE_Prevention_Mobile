@@ -24,39 +24,24 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   );
   const canCancel = appointment.status === "booked" && !formattedSlot.isPast;
 
+  // ❌ FEATURE DISABLED: Cancel appointment endpoint is not available
   const handleCancelAppointment = () => {
     Alert.alert(
-      "Xác nhận hủy lịch hẹn",
-      `Bạn có chắc chắn muốn hủy lịch hẹn vào ${formattedSlot.formattedTimeRange} ngày ${formattedSlot.formattedDate}?`,
+      "Chức năng chưa khả dụng",
+      "Chức năng hủy lịch hẹn chưa được hỗ trợ trong phiên bản hiện tại. Vui lòng liên hệ trực tiếp với chuyên viên tư vấn để hủy lịch hẹn.",
       [
         {
-          text: "Không",
-          style: "cancel",
-        },
-        {
-          text: "Hủy lịch hẹn",
-          style: "destructive",
-          onPress: cancelAppointment,
+          text: "Đã hiểu",
+          style: "default",
         },
       ]
     );
   };
 
+  // ❌ FEATURE DISABLED: Cancel appointment endpoint is not available
   const cancelAppointment = async () => {
-    try {
-      setLoading(true);
-      await appointmentService.cancelAppointment(appointment._id);
-      Alert.alert("Thành công", "Lịch hẹn đã được hủy", [
-        {
-          text: "OK",
-          onPress: () => navigation.goBack(),
-        },
-      ]);
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể hủy lịch hẹn. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
-    }
+    // This method is disabled as the API endpoint doesn't exist
+    Alert.alert("Lỗi", "Chức năng hủy lịch hẹn chưa được hỗ trợ.");
   };
 
   const handleContactConsultant = () => {

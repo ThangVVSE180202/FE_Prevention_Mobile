@@ -24,12 +24,18 @@ const MyAppointmentsScreen = ({ navigation }) => {
     fetchMyAppointments();
   }, []);
 
+  // ❌ FEATURE DISABLED: This endpoint is not available in the current API
+  // The API doesn't provide a way to get user's appointments list
   const fetchMyAppointments = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await appointmentService.getMyAppointments();
-      setAppointments(response.data.appointments || []);
+
+      // Show message that this feature is not available
+      setError(
+        "Chức năng xem danh sách lịch hẹn chưa được hỗ trợ trong phiên bản hiện tại."
+      );
+      setAppointments([]);
     } catch (err) {
       setError(err.message);
       console.error("Failed to fetch appointments:", err);
@@ -44,34 +50,24 @@ const MyAppointmentsScreen = ({ navigation }) => {
     fetchMyAppointments();
   };
 
+  // ❌ FEATURE DISABLED: Cancel appointment endpoint is not available
   const handleCancelAppointment = (appointment) => {
-    const formattedSlot = appointmentService.formatTimeSlot(appointment);
-
     Alert.alert(
-      "Xác nhận hủy lịch hẹn",
-      `Bạn có chắc chắn muốn hủy lịch hẹn vào ${formattedSlot.formattedTimeRange} ngày ${formattedSlot.formattedDate}?`,
+      "Chức năng chưa khả dụng",
+      "Chức năng hủy lịch hẹn chưa được hỗ trợ trong phiên bản hiện tại. Vui lòng liên hệ trực tiếp với chuyên viên tư vấn để hủy lịch hẹn.",
       [
         {
-          text: "Không",
-          style: "cancel",
-        },
-        {
-          text: "Hủy lịch hẹn",
-          style: "destructive",
-          onPress: () => cancelAppointment(appointment._id),
+          text: "Đã hiểu",
+          style: "default",
         },
       ]
     );
   };
 
+  // ❌ FEATURE DISABLED: Cancel appointment endpoint is not available
   const cancelAppointment = async (appointmentId) => {
-    try {
-      await appointmentService.cancelAppointment(appointmentId);
-      Alert.alert("Thành công", "Lịch hẹn đã được hủy");
-      fetchMyAppointments(); // Refresh the list
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể hủy lịch hẹn. Vui lòng thử lại.");
-    }
+    // This method is disabled as the API endpoint doesn't exist
+    Alert.alert("Lỗi", "Chức năng hủy lịch hẹn chưa được hỗ trợ.");
   };
 
   const handleViewDetails = (appointment) => {

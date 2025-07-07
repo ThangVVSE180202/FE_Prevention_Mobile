@@ -100,84 +100,86 @@ class UserService {
     });
   }
 
-  // Get consultants
-  async getConsultants() {
-    return this.getUsersByRole("consultant");
-  }
+  // ❌ COMMENTED OUT: Members cannot access this endpoint per API guide
+  // Get consultants (Requires admin permissions - members get 401/403)
+  // async getConsultants() {
+  //   return this.getUsersByRole("consultant");
+  // }
 
-  // Change password (if endpoint exists)
-  async changePassword(passwordData) {
-    return authService.authenticatedRequest("/users/change-password", {
-      method: HTTP_METHODS.PATCH,
-      body: JSON.stringify(passwordData),
-    });
-  }
+  // ❌ COMMENTED OUT: These endpoints are not documented in the API guide
+  // Change password (NOT DOCUMENTED in current API guide)
+  // async changePassword(passwordData) {
+  //   return authService.authenticatedRequest("/users/change-password", {
+  //     method: HTTP_METHODS.PATCH,
+  //     body: JSON.stringify(passwordData),
+  //   });
+  // }
 
-  // Upload profile photo (if endpoint exists)
-  async uploadProfilePhoto(userId, photoData) {
-    // Note: This would typically use FormData for file upload
-    const formData = new FormData();
-    formData.append("photo", photoData);
+  // Upload profile photo (NOT DOCUMENTED in current API guide)
+  // async uploadProfilePhoto(userId, photoData) {
+  //   // Note: This would typically use FormData for file upload
+  //   const formData = new FormData();
+  //   formData.append("photo", photoData);
 
-    return authService.authenticatedRequest(`/users/${userId}/photo`, {
-      method: HTTP_METHODS.PATCH,
-      body: formData,
-      headers: {
-        // Don't set Content-Type for FormData, let browser set it
-      },
-    });
-  }
+  //   return authService.authenticatedRequest(`/users/${userId}/photo`, {
+  //     method: HTTP_METHODS.PATCH,
+  //     body: formData,
+  //     headers: {
+  //       // Don't set Content-Type for FormData, let browser set it
+  //     },
+  //   });
+  // }
 
-  // Get user's course enrollments
-  async getUserEnrollments(userId) {
-    return authService.authenticatedRequest(`/users/${userId}/enrollments`, {
-      method: HTTP_METHODS.GET,
-    });
-  }
+  // Get user's course enrollments (NOT DOCUMENTED in current API guide)
+  // async getUserEnrollments(userId) {
+  //   return authService.authenticatedRequest(`/users/${userId}/enrollments`, {
+  //     method: HTTP_METHODS.GET,
+  //   });
+  // }
 
-  // Get current user's enrollments
-  async getCurrentUserEnrollments() {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser || !currentUser._id) {
-      throw new Error("No current user found");
-    }
+  // Get current user's enrollments (NOT DOCUMENTED in current API guide)
+  // async getCurrentUserEnrollments() {
+  //   const currentUser = authService.getCurrentUser();
+  //   if (!currentUser || !currentUser._id) {
+  //     throw new Error("No current user found");
+  //   }
 
-    return this.getUserEnrollments(currentUser._id);
-  }
+  //   return this.getUserEnrollments(currentUser._id);
+  // }
 
-  // Get user's survey results
-  async getUserSurveyResults(userId) {
-    return authService.authenticatedRequest(`/users/${userId}/survey-results`, {
-      method: HTTP_METHODS.GET,
-    });
-  }
+  // Get user's survey results (NOT DOCUMENTED in current API guide)
+  // async getUserSurveyResults(userId) {
+  //   return authService.authenticatedRequest(`/users/${userId}/survey-results`, {
+  //     method: HTTP_METHODS.GET,
+  //   });
+  // }
 
-  // Get current user's survey results
-  async getCurrentUserSurveyResults() {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser || !currentUser._id) {
-      throw new Error("No current user found");
-    }
+  // Get current user's survey results (NOT DOCUMENTED in current API guide)
+  // async getCurrentUserSurveyResults() {
+  //   const currentUser = authService.getCurrentUser();
+  //   if (!currentUser || !currentUser._id) {
+  //     throw new Error("No current user found");
+  //   }
 
-    return this.getUserSurveyResults(currentUser._id);
-  }
+  //   return this.getUserSurveyResults(currentUser._id);
+  // }
 
-  // Get user's appointments
-  async getUserAppointments(userId) {
-    return authService.authenticatedRequest(`/users/${userId}/appointments`, {
-      method: HTTP_METHODS.GET,
-    });
-  }
+  // Get user's appointments (NOT DOCUMENTED in current API guide)
+  // async getUserAppointments(userId) {
+  //   return authService.authenticatedRequest(`/users/${userId}/appointments`, {
+  //     method: HTTP_METHODS.GET,
+  //   });
+  // }
 
-  // Get current user's appointments
-  async getCurrentUserAppointments() {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser || !currentUser._id) {
-      throw new Error("No current user found");
-    }
+  // Get current user's appointments (NOT DOCUMENTED in current API guide)
+  // async getCurrentUserAppointments() {
+  //   const currentUser = authService.getCurrentUser();
+  //   if (!currentUser || !currentUser._id) {
+  //     throw new Error("No current user found");
+  //   }
 
-    return this.getUserAppointments(currentUser._id);
-  }
+  //   return this.getUserAppointments(currentUser._id);
+  // }
 
   // Format user data for display
   formatUserData(user) {

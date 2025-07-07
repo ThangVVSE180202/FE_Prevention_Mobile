@@ -1,5 +1,13 @@
 // 📝 Survey Service
 // Handles all survey and assessment-related API calls
+//
+// ✅ AVAILABLE ENDPOINTS (from API guide):
+// - GET /surveys - Get list of surveys (Authenticated)
+// - GET /surveys/:id - Get survey details (Authenticated)
+// - POST /surveys/:id/submit - Submit survey answers (Authenticated)
+//
+// ❌ UNAVAILABLE/COMMENTED ENDPOINTS:
+// - /surveys/my-results - Get user's survey history (not in API guide)
 
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 import authService from "./authService";
@@ -98,12 +106,13 @@ class SurveyService {
     };
   }
 
-  // Get user's survey history (if endpoint exists)
-  async getUserSurveyHistory() {
-    return authService.authenticatedRequest("/surveys/my-results", {
-      method: HTTP_METHODS.GET,
-    });
-  }
+  // ❌ COMMENTED OUT: This endpoint is not documented in the API guide
+  // Get user's survey history (NOT AVAILABLE in current API guide)
+  // async getUserSurveyHistory() {
+  //   return authService.authenticatedRequest("/surveys/my-results", {
+  //     method: HTTP_METHODS.GET,
+  //   });
+  // }
 
   // Validate survey answers before submission
   validateAnswers(survey, answers) {
