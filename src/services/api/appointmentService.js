@@ -41,7 +41,7 @@ class AppointmentService {
 
   // Get available slots for a consultant
   async getConsultantSlots(consultantId) {
-    return this.makeRequest(
+    return authService.authenticatedRequest(
       ENDPOINTS.APPOINTMENTS.CONSULTANT_SLOTS(consultantId),
       {
         method: HTTP_METHODS.GET,
