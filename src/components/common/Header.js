@@ -10,7 +10,6 @@ import {
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { useAuth } from "../../context/AuthContext";
 
-
 import DrugFreeLogo from "../../../assets/images/DrugFreeLogo.png";
 
 const Header = () => {
@@ -51,11 +50,14 @@ const Header = () => {
         <TouchableOpacity onPress={() => navigation.navigate("Booking")}>
           <Text style={styles.link}>Tư vấn</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate("Blog")}>
+        <TouchableOpacity onPress={() => navigation.navigate("BlogList")}>
           <Text style={styles.link}>Blog</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("Assessment")}>
           <Text style={styles.link}>Kiểm tra</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("SurveyList")}>
+          <Text style={styles.link}>Khảo sát</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate("AboutUs")}>
           <Text style={styles.link}>Về chúng tôi</Text>
