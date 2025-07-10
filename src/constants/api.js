@@ -49,7 +49,7 @@ export const ENDPOINTS = {
     MY_SLOTS: "/appointment-slots/my-slots",
     MY_BOOKINGS: "/appointment-slots/my-bookings",
     CONSULTANT_SLOTS: (consultantId) =>
-      `/appointment-slots/consultant/${consultantId}`,
+      `/appointment-slots/consultants/${consultantId}`,
     BOOK_SLOT: (slotId) => `/appointment-slots/${slotId}/book`,
     CANCEL_SLOT: (slotId) => `/appointment-slots/${slotId}/cancel`,
     MARK_NO_SHOW: (slotId) => `/appointment-slots/${slotId}/mark-no-show`,

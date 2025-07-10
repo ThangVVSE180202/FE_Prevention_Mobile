@@ -18,8 +18,16 @@ const Stack = createNativeStackNavigator();
 const AppointmentStackNavigator = () => {
   const { user } = useAuth();
 
+  // Debug: Log user and role at navigation render
+  console.log("[AppointmentStackNavigator] user:", user);
+  console.log("[AppointmentStackNavigator] user.role:", user?.role);
+
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      initialRouteName={
+        user?.role === "consultant" ? "MySlots" : "ConsultantList"
+      }
+    >
       {/* Common screens for all users */}
       <Stack.Screen
         name="ConsultantList"

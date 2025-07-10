@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { HomePage } from "../screens/Home";
 import AppointmentStackNavigator from "./stacks/AppointmentStackNavigator";
+import { useAuth } from "../context/AuthContext";
 // import CoursesScreen from "../screens/courses/CoursesScreen";
 // import SurveysScreen from "../screens/surveys/SurveysScreen";
 // import ProfileScreen from "../screens/profile/ProfileScreen";
@@ -11,6 +12,11 @@ import AppointmentStackNavigator from "./stacks/AppointmentStackNavigator";
 const Tab = createBottomTabNavigator();
 
 const MainTabNavigator = () => {
+  const { user } = useAuth();
+
+  // Debug: Log user and role in main tab navigator
+  console.log("[MainTabNavigator] user:", user);
+  console.log("[MainTabNavigator] user.role:", user?.role);
   return (
     <Tab.Navigator
       initialRouteName="Home"

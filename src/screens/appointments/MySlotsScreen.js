@@ -1,4 +1,4 @@
-// 📅 My Slots Screen (Consultant only)
+// 📅 My Time Slots Screen (Consultant only)
 // For consultants to view and manage their own time slots
 
 import React, { useState, useEffect } from "react";
@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  StatusBar,
+  SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { appointmentService } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
@@ -117,272 +120,468 @@ const MySlotsScreen = ({ navigation }) => {
     ]);
   };
 
+  const getStatusColor = (status) => {
+    const colors = {
+      available: "#10B981",
+      booked: "#3B82F6",
+      completed: "#8B5CF6",
+      cancelled: "#EF4444",
+      no_show: "#F59E0B",
+    };
+    return colors[status] || "#6B7280";
+  };
+
+  const getStatusText = (status) => {
+    const texts = {
+      available: "Có sẵn",
+      booked: "Đã đặt",
+      completed: "Hoàn thành",
+      cancelled: "Đã hủy",
+      no_show: "Không đến",
+    };
+    return texts[status] || status;
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let dateLabel;
+    if (date.toDateString() === today.toDateString()) {
+      dateLabel = "Hôm nay";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      dateLabel = "Ngày mai";
+    } else {
+      dateLabel = date.toLocaleDateString("vi-VN", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
+    const time = date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return { date: dateLabel, time };
+  };
+
   const renderSlot = ({ item }) => {
-    const formatted = appointmentService.formatTimeSlot(item);
-    const statusInfo = appointmentService.getAppointmentStatus(
-      item.status,
-      item.isNoShow
-    );
-    const now = new Date();
-    const slotTime = new Date(item.startTime);
+    const startDateTime = formatDateTime(item.startTime);
+    const endDateTime = formatDateTime(item.endTime);
+    const statusColor = getStatusColor(item.status);
     const canMarkNoShow =
-      item.status === "booked" && !item.isNoShow && now > slotTime;
+      item.status === "booked" && new Date(item.endTime) < new Date();
 
     return (
       <View style={styles.slotCard}>
+        {/* Header with date and status */}
         <View style={styles.slotHeader}>
-          <Text style={styles.slotDate}>{formatted.formattedDate}</Text>
-          <View
-            style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}
-          >
-            <Text style={styles.statusText}>{statusInfo.label}</Text>
+          <View style={styles.dateContainer}>
+            <Text style={styles.dateText}>{startDateTime.date}</Text>
+            <Text style={styles.timeText}>
+              {startDateTime.time} - {endDateTime.time}
+            </Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+            <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
         </View>
 
-        <Text style={styles.slotTime}>{formatted.formattedTimeRange}</Text>
-
-        {/* Show member information for booked slots */}
-        {item.status === "booked" && item.member && (
-          <View style={styles.memberInfo}>
-            <Text style={styles.memberLabel}>Thành viên:</Text>
-            <Text style={styles.memberName}>{item.member.name}</Text>
-            {item.member.email && (
-              <Text style={styles.memberEmail}>{item.member.email}</Text>
-            )}
-            {item.notes && (
-              <View style={styles.notesContainer}>
-                <Text style={styles.notesLabel}>Ghi chú:</Text>
-                <Text style={styles.notesText}>{item.notes}</Text>
+        {/* Member Info */}
+        {item.member && (
+          <View style={styles.memberSection}>
+            <View style={styles.memberHeader}>
+              <View style={styles.avatarContainer}>
+                <Ionicons name="person" size={16} color="#fff" />
               </View>
-            )}
+              <View style={styles.memberInfo}>
+                <Text style={styles.memberName}>{item.member.name}</Text>
+                {item.member.email && (
+                  <Text style={styles.memberEmail}>{item.member.email}</Text>
+                )}
+              </View>
+            </View>
           </View>
         )}
 
-        <View style={styles.actionButtons}>
-          {item.status === "available" && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDeleteSlot(item._id)}
-            >
-              <Text style={styles.deleteButtonText}>Xóa</Text>
-            </TouchableOpacity>
-          )}
+        {/* Notes */}
+        {item.notes && (
+          <View style={styles.notesSection}>
+            <View style={styles.notesHeader}>
+              <Ionicons
+                name="document-text-outline"
+                size={14}
+                color="#6B7280"
+              />
+              <Text style={styles.notesLabel}>Ghi chú</Text>
+            </View>
+            <Text style={styles.notesText}>{item.notes}</Text>
+          </View>
+        )}
 
-          {canMarkNoShow && (
-            <TouchableOpacity
-              style={styles.noShowButton}
-              onPress={() => handleMarkNoShow(item._id)}
-            >
-              <Text style={styles.noShowButtonText}>Đánh dấu không đến</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Action Buttons */}
+        {(item.status === "available" || canMarkNoShow) && (
+          <View style={styles.actionButtons}>
+            {item.status === "available" && (
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteSlot(item._id)}
+              >
+                <Ionicons name="trash-outline" size={14} color="#fff" />
+                <Text style={styles.buttonText}>Xóa</Text>
+              </TouchableOpacity>
+            )}
+
+            {canMarkNoShow && (
+              <TouchableOpacity
+                style={styles.noShowButton}
+                onPress={() => handleMarkNoShow(item._id)}
+              >
+                <Ionicons name="close-circle-outline" size={14} color="#fff" />
+                <Text style={styles.buttonText}>Không đến</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Text>Đang tải...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <View style={styles.centerContainer}>
+          <View style={styles.loadingContainer}>
+            <Ionicons name="time-outline" size={48} color="#E5E7EB" />
+            <Text style={styles.loadingText}>Đang tải khung giờ...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Khung giờ của tôi</Text>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreateSlots}
-        >
-          <Text style={styles.createButtonText}>Tạo khung giờ</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Khung giờ của tôi</Text>
+            <Text style={styles.subtitle}>
+              Quản lý lịch tư vấn chuyên nghiệp
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleCreateSlots}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.createButtonText}>Tạo mới</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Error Message */}
       {error && (
         <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={20} color="#EF4444" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
 
+      {/* Slots List */}
       <FlatList
         data={slots}
         renderItem={renderSlot}
         keyExtractor={(item) => item._id}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3B82F6"
+            colors={["#3B82F6"]}
+          />
         }
+        contentContainerStyle={[
+          styles.listContainer,
+          slots.length === 0 && styles.emptyListContainer,
+        ]}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Bạn chưa tạo khung giờ nào</Text>
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="calendar-outline" size={64} color="#E5E7EB" />
+            </View>
+            <Text style={styles.emptyTitle}>Chưa có khung giờ nào</Text>
+            <Text style={styles.emptySubtitle}>
+              Tạo khung giờ đầu tiên để bắt đầu nhận lịch hẹn tư vấn từ thành
+              viên
+            </Text>
             <TouchableOpacity
-              style={styles.createButton}
+              style={styles.emptyButton}
               onPress={handleCreateSlots}
             >
-              <Text style={styles.createButtonText}>
-                Tạo khung giờ đầu tiên
-              </Text>
+              <Ionicons name="add" size={20} color="#fff" />
+              <Text style={styles.emptyButtonText}>Tạo khung giờ đầu tiên</Text>
             </TouchableOpacity>
           </View>
         }
-        contentContainerStyle={slots.length === 0 ? styles.emptyList : null}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FAFAFA",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
+  loadingContainer: {
+    alignItems: "center",
+    padding: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 16,
+  },
   header: {
+    backgroundColor: "#fff",
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+  },
+  titleContainer: {
+    flex: 1,
   },
   title: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: "bold",
-    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6B7280",
   },
   createButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    backgroundColor: "#3B82F6",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
+    gap: 6,
   },
   createButtonText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: FONT_SIZES.sm,
+    fontWeight: "600",
+    fontSize: 14,
   },
   errorContainer: {
-    backgroundColor: "#ffebee",
-    padding: SPACING.md,
-    margin: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    marginHorizontal: 24,
+    marginTop: 16,
+    padding: 16,
     borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: "#EF4444",
+    gap: 12,
   },
   errorText: {
-    color: "#c62828",
-    textAlign: "center",
+    color: "#DC2626",
+    fontSize: 14,
+    flex: 1,
+  },
+  listContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+  emptyListContainer: {
+    flexGrow: 1,
   },
   slotCard: {
     backgroundColor: "#fff",
-    margin: SPACING.sm,
-    padding: SPACING.md,
     borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   slotHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: SPACING.sm,
+    alignItems: "flex-start",
+    marginBottom: 16,
   },
-  slotDate: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "bold",
-    color: COLORS.text,
+  dateContainer: {
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 4,
+  },
+  timeText: {
+    fontSize: 14,
+    color: "#6B7280",
   },
   statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   statusText: {
     color: "#fff",
-    fontSize: FONT_SIZES.xs,
-    fontWeight: "bold",
+    fontSize: 12,
+    fontWeight: "600",
   },
-  slotTime: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  deleteButton: {
-    backgroundColor: "#f44336",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+  memberSection: {
+    backgroundColor: "#F9FAFB",
     borderRadius: 8,
-    marginRight: SPACING.sm,
+    padding: 16,
+    marginBottom: 16,
   },
-  deleteButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: FONT_SIZES.sm,
+  memberHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  // New styles for member info and actions
+  avatarContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#3B82F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   memberInfo: {
-    backgroundColor: "#f5f5f5",
-    padding: SPACING.sm,
-    borderRadius: 8,
-    marginVertical: SPACING.sm,
-  },
-  memberLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "bold",
-    color: COLORS.textSecondary,
-    marginBottom: 2,
+    flex: 1,
   },
   memberName: {
-    fontSize: FONT_SIZES.md,
-    fontWeight: "bold",
-    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 2,
   },
   memberEmail: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: 13,
+    color: "#6B7280",
   },
-  notesContainer: {
-    marginTop: SPACING.xs,
-    paddingTop: SPACING.xs,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
+  notesSection: {
+    marginBottom: 16,
+  },
+  notesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
   },
   notesLabel: {
-    fontSize: FONT_SIZES.sm,
-    fontWeight: "bold",
-    color: COLORS.textSecondary,
-    marginBottom: 2,
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6B7280",
   },
   notesText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text,
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 20,
     fontStyle: "italic",
   },
   actionButtons: {
     flexDirection: "row",
-    marginTop: SPACING.sm,
+    gap: 12,
+  },
+  deleteButton: {
+    backgroundColor: "#EF4444",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 6,
   },
   noShowButton: {
-    backgroundColor: "#ff9800",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: 8,
+    backgroundColor: "#F59E0B",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 6,
   },
-  noShowButtonText: {
+  buttonText: {
     color: "#fff",
-    fontWeight: "bold",
-    fontSize: FONT_SIZES.sm,
+    fontSize: 13,
+    fontWeight: "500",
   },
-  // ...existing styles...
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyIconContainer: {
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  emptyButton: {
+    backgroundColor: "#3B82F6",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  emptyButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+  },
 });
 
 export default MySlotsScreen;
