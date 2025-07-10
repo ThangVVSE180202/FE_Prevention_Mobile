@@ -32,16 +32,29 @@ class AppointmentService {
   }
 
   // Create time slots (Consultant only)
-  async createTimeSlots(slots) {
-    return authService.authenticatedRequest(ENDPOINTS.APPOINTMENTS.MY_SLOTS, {
-      method: HTTP_METHODS.POST,
-      body: JSON.stringify({ slots }),
-    });
+  async createTimeSlots(slotsData) {
+    console.log("Creating time slots with data:", slotsData);
+
+    try {
+      const result = await authService.authenticatedRequest(
+        ENDPOINTS.APPOINTMENTS.MY_SLOTS,
+        {
+          method: HTTP_METHODS.POST,
+          body: JSON.stringify(slotsData),
+        }
+      );
+
+      console.log("Create slots result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error in createTimeSlots:", error);
+      throw error;
+    }
   }
 
-  // Get available slots for a consultant
+  // Get available slots for a consultant (Public endpoint)
   async getConsultantSlots(consultantId) {
-    return this.makeRequest(
+    return authService.authenticatedRequest(
       ENDPOINTS.APPOINTMENTS.CONSULTANT_SLOTS(consultantId),
       {
         method: HTTP_METHODS.GET,
@@ -50,45 +63,56 @@ class AppointmentService {
   }
 
   // Book an appointment slot (Member only)
-  async bookAppointmentSlot(slotId) {
+  async bookAppointmentSlot(slotId, data = {}) {
     return authService.authenticatedRequest(
       ENDPOINTS.APPOINTMENTS.BOOK_SLOT(slotId),
       {
         method: HTTP_METHODS.PATCH,
+        body: JSON.stringify(data),
       }
     );
   }
 
-  // Get user's appointments (if endpoint exists)
-  async getMyAppointments() {
-    return authService.authenticatedRequest("/appointments/my-appointments", {
+  // Get consultant's own slots (Consultant only) - NEW
+  async getMySlots() {
+    return authService.authenticatedRequest(ENDPOINTS.APPOINTMENTS.MY_SLOTS, {
       method: HTTP_METHODS.GET,
     });
   }
 
-  // Get consultant's appointments (if endpoint exists)
-  async getConsultantAppointments() {
+  // Get user's bookings (Member only) - NEW
+  async getMyBookings() {
     return authService.authenticatedRequest(
-      "/appointments/consultant-appointments",
+      ENDPOINTS.APPOINTMENTS.MY_BOOKINGS,
       {
         method: HTTP_METHODS.GET,
       }
     );
   }
 
-  // Cancel appointment (if endpoint exists)
-  async cancelAppointment(appointmentId) {
+  // Cancel appointment (Member only) - NEW
+  async cancelAppointmentSlot(slotId) {
     return authService.authenticatedRequest(
-      `/appointments/${appointmentId}/cancel`,
+      ENDPOINTS.APPOINTMENTS.CANCEL_SLOT(slotId),
       {
         method: HTTP_METHODS.PATCH,
       }
     );
   }
 
-  // Get all consultants (if endpoint exists)
+  // Mark no-show (Consultant only) - NEW
+  async markNoShow(slotId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.APPOINTMENTS.MARK_NO_SHOW(slotId),
+      {
+        method: HTTP_METHODS.PATCH,
+      }
+    );
+  }
+
+  // Get all consultants - NEW (now available)
   async getConsultants() {
-    return this.makeRequest("/users?role=consultant", {
+    return authService.authenticatedRequest(ENDPOINTS.USERS.CONSULTANTS, {
       method: HTTP_METHODS.GET,
     });
   }
@@ -187,6 +211,14 @@ class AppointmentService {
     const slots = [];
     const baseDate = new Date(date);
 
+    console.log("generateDaySlots input:", {
+      date,
+      startHour,
+      endHour,
+      slotDuration,
+    });
+    console.log("baseDate:", baseDate);
+
     for (let hour = startHour; hour < endHour; hour += slotDuration / 60) {
       const startTime = new Date(baseDate);
       startTime.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
@@ -200,19 +232,120 @@ class AppointmentService {
       });
     }
 
+    console.log("Generated slots:", slots);
     return slots;
   }
 
   // Format appointment status
-  getAppointmentStatus(status) {
+  getAppointmentStatus(status, isNoShow = false) {
     const statusMap = {
       available: { label: "Có thể đặt", color: "#4CAF50" },
-      booked: { label: "Đã đặt", color: "#FF9800" },
+      booked: {
+        label: isNoShow ? "Không đến hẹn" : "Đã đặt",
+        color: isNoShow ? "#F44336" : "#FF9800",
+      },
       completed: { label: "Hoàn thành", color: "#2196F3" },
       cancelled: { label: "Đã hủy", color: "#F44336" },
     };
 
     return statusMap[status] || { label: status, color: "#9E9E9E" };
+  }
+
+  // Get appointment action buttons based on status and user role
+  getAvailableActions(appointment, userRole) {
+    const actions = [];
+    const now = new Date();
+    const startTime = new Date(appointment.startTime);
+    const timeUntilStart = startTime - now;
+    const hoursUntilStart = timeUntilStart / (1000 * 60 * 60);
+
+    if (
+      userRole === "member" &&
+      appointment.status === "booked" &&
+      !appointment.isNoShow
+    ) {
+      // Members can cancel their bookings
+      actions.push({
+        type: "cancel",
+        label: "Hủy lịch hẹn",
+        color: "#F44336",
+        disabled: false,
+      });
+    }
+
+    if (
+      userRole === "consultant" &&
+      appointment.status === "booked" &&
+      !appointment.isNoShow
+    ) {
+      // Consultants can mark no-show after appointment time
+      if (now > startTime) {
+        actions.push({
+          type: "mark_no_show",
+          label: "Đánh dấu không đến",
+          color: "#F44336",
+          disabled: false,
+        });
+      }
+    }
+
+    return actions;
+  }
+
+  // Handle appointment booking errors with strikes system
+  handleBookingError(error) {
+    const message = error.message;
+
+    if (message.includes("khoá chức năng đặt lịch")) {
+      // User is banned
+      return { type: "banned", message };
+    } else if (message.includes("2 lịch cùng lúc")) {
+      // Too many active bookings
+      return { type: "limit_exceeded", message };
+    } else if (message.includes("30 phút")) {
+      // Too close to appointment time
+      return { type: "time_warning", message };
+    } else if (message.includes("409")) {
+      // Slot conflict
+      return { type: "conflict", message };
+    }
+    return { type: "unknown", message };
+  }
+
+  // Handle appointment cancellation errors
+  handleCancelError(error) {
+    const message = error.message;
+
+    if (message.includes("hết lượt hủy")) {
+      // Daily limit reached
+      return { type: "daily_limit", message };
+    } else if (message.includes("đợi") && message.includes("tiếng")) {
+      // Cooldown active
+      const timeMatch = message.match(/(\d+) tiếng (\d+) phút/);
+      return {
+        type: "cooldown",
+        message,
+        hours: timeMatch ? parseInt(timeMatch[1]) : 0,
+        minutes: timeMatch ? parseInt(timeMatch[2]) : 0,
+      };
+    } else if (message.includes("chỉ có thể hủy lịch hẹn của mình")) {
+      // Not user's appointment
+      return { type: "unauthorized", message };
+    }
+    return { type: "unknown", message };
+  }
+
+  // Parse user status from API responses
+  parseUserStatus(responseData) {
+    return {
+      currentStrikes: responseData.userStatus?.strikes || 0,
+      maxStrikes: 3,
+      isBanned: responseData.userStatus?.isBanned || false,
+      banUntil: responseData.userStatus?.banUntil,
+      dailyCancellations: responseData.userStatus?.dailyCancellations || 0,
+      maxDailyCancellations: 3,
+      nextCancelAvailable: responseData.userStatus?.nextCancelAvailable,
+    };
   }
 }
 

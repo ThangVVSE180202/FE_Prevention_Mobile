@@ -15,3 +15,5 @@ export { default as AvailableSlotsScreen } from "./AvailableSlotsScreen";
 export { default as AppointmentBookingScreen } from "./AppointmentBookingScreen";
 export { default as MyAppointmentsScreen } from "./MyAppointmentsScreen";
 export { default as AppointmentDetailScreen } from "./AppointmentDetailScreen";
+export { default as MySlotsScreen } from "./MySlotsScreen";
+export { default as CreateSlotsScreen } from "./CreateSlotsScreen";

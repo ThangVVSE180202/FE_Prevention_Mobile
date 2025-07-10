@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/common/Header";
+import { useAuth } from "../../context/AuthContext";
 
 // Ảnh
 import PreventionImg from "../../../assets/images/Prevention.jpg";
@@ -24,6 +25,7 @@ const screenWidth = Dimensions.get("window").width;
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     users: 0,
     courses: 0,
@@ -32,6 +34,10 @@ const HomeScreen = () => {
   });
 
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Debug: Log user and role in HomePage
+  console.log("[HomePage] user:", user);
+  console.log("[HomePage] user.role:", user?.role);
 
   // Counter animation
   useEffect(() => {

@@ -11,30 +11,41 @@ import SurveySubmit from "../screens/surveys/SurveySubmit";
 import BlogDetail from "../screens/blog/BlogDetail";
 import SurveyResult from "../screens/surveys/SurveyResult";
 import HomePage from "../screens/Home/HomePage";
+import { useAuth } from "../context/AuthContext";
+
 const RootStack = createNativeStackNavigator();
 
 const AppNavigator = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    // TODO: kiểm tra token AsyncStorage ở đây
-    setTimeout(() => {
-      setIsLoggedIn(false); // or true to test
-    }, 1000);
-  }, []);
+  // Debug: Log user and auth state
+  console.log("[AppNavigator] user:", user);
+  console.log("[AppNavigator] user.role:", user?.role);
+  console.log("[AppNavigator] loading:", loading);
+
+  // Show nothing while loading
+  if (loading) {
+    return null;
+  }
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Luôn khai báo cả 2 màn hình */}
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
-        <RootStack.Screen name="Main" component={MainTabNavigator} />
-        <RootStack.Screen name="BlogList" component={BlogList} />
-        <RootStack.Screen name="SurveyList" component={SurveyList} />
-        <RootStack.Screen name="SurveyDetail" component={SurveyDetail} />
-        <RootStack.Screen name="SurveySubmit" component={SurveySubmit} />
-        <RootStack.Screen name="BlogDetail" component={BlogDetail} />
-        <RootStack.Screen name="SurveyResult" component={SurveyResult} />
+        {!user ? (
+          // Not logged in - show auth screens
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
+        ) : (
+          // Logged in - show main app screens
+          <>
+            <RootStack.Screen name="Main" component={MainTabNavigator} />
+            <RootStack.Screen name="BlogList" component={BlogList} />
+            <RootStack.Screen name="SurveyList" component={SurveyList} />
+            <RootStack.Screen name="SurveyDetail" component={SurveyDetail} />
+            <RootStack.Screen name="SurveySubmit" component={SurveySubmit} />
+            <RootStack.Screen name="BlogDetail" component={BlogDetail} />
+            <RootStack.Screen name="SurveyResult" component={SurveyResult} />
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );
