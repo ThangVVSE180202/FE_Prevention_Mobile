@@ -32,14 +32,14 @@ class AppointmentService {
   }
 
   // Create time slots (Consultant only)
-  async createTimeSlots(slots) {
+  async createTimeSlots(slotsData) {
     return authService.authenticatedRequest(ENDPOINTS.APPOINTMENTS.MY_SLOTS, {
       method: HTTP_METHODS.POST,
-      body: JSON.stringify({ slots }),
+      body: JSON.stringify(slotsData),
     });
   }
 
-  // Get available slots for a consultant
+  // Get available slots for a consultant (Public endpoint)
   async getConsultantSlots(consultantId) {
     return authService.authenticatedRequest(
       ENDPOINTS.APPOINTMENTS.CONSULTANT_SLOTS(consultantId),

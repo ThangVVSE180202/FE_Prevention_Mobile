@@ -173,13 +173,18 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#fff",
-    paddingVertical: 20,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    minHeight: 88,
+    paddingTop: 32,
+    paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   headerContent: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   title: {
     fontSize: 24,

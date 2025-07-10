@@ -39,7 +39,7 @@ const MySlotsScreen = ({ navigation }) => {
       setLoading(true);
       setError(null);
       const response = await appointmentService.getMySlots();
-      setSlots(response.slots || []);
+      setSlots(response.data?.slots || []);
     } catch (err) {
       console.error("Error fetching my slots:", err);
       setError(err.message);
@@ -176,6 +176,10 @@ const MySlotsScreen = ({ navigation }) => {
     const canMarkNoShow =
       item.status === "booked" && new Date(item.endTime) < new Date();
 
+    // Calculate duration
+    const durationMs = new Date(item.endTime) - new Date(item.startTime);
+    const durationMinutes = Math.round(durationMs / (1000 * 60));
+
     return (
       <View style={styles.slotCard}>
         {/* Header with date and status */}
@@ -185,25 +189,34 @@ const MySlotsScreen = ({ navigation }) => {
             <Text style={styles.timeText}>
               {startDateTime.time} - {endDateTime.time}
             </Text>
+            <Text style={styles.durationText}>{durationMinutes} phút</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
             <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
           </View>
         </View>
 
-        {/* Member Info */}
-        {item.member && (
+        {/* Member Info for booked slots */}
+        {item.member && item.status === "booked" && (
           <View style={styles.memberSection}>
             <View style={styles.memberHeader}>
               <View style={styles.avatarContainer}>
                 <Ionicons name="person" size={16} color="#fff" />
               </View>
               <View style={styles.memberInfo}>
-                <Text style={styles.memberName}>{item.member.name}</Text>
+                <Text style={styles.memberName}>
+                  {item.member.name || "Thành viên"}
+                </Text>
                 {item.member.email && (
                   <Text style={styles.memberEmail}>{item.member.email}</Text>
                 )}
+                {item.member.phone && (
+                  <Text style={styles.memberPhone}>{item.member.phone}</Text>
+                )}
               </View>
+              <TouchableOpacity style={styles.contactButton}>
+                <Ionicons name="call-outline" size={16} color="#3B82F6" />
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -217,11 +230,23 @@ const MySlotsScreen = ({ navigation }) => {
                 size={14}
                 color="#6B7280"
               />
-              <Text style={styles.notesLabel}>Ghi chú</Text>
+              <Text style={styles.notesLabel}>Ghi chú từ thành viên</Text>
             </View>
             <Text style={styles.notesText}>{item.notes}</Text>
           </View>
         )}
+
+        {/* Created/Updated info */}
+        <View style={styles.timestampSection}>
+          <Text style={styles.timestampText}>
+            Tạo lúc: {new Date(item.createdAt).toLocaleString("vi-VN")}
+          </Text>
+          {item.updatedAt !== item.createdAt && (
+            <Text style={styles.timestampText}>
+              Cập nhật: {new Date(item.updatedAt).toLocaleString("vi-VN")}
+            </Text>
+          )}
+        </View>
 
         {/* Action Buttons */}
         {(item.status === "available" || canMarkNoShow) && (
@@ -271,7 +296,14 @@ const MySlotsScreen = ({ navigation }) => {
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+          }}
+        >
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Khung giờ của tôi</Text>
             <Text style={styles.subtitle}>
@@ -359,15 +391,17 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#fff",
-    paddingVertical: 20,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    minHeight: 88,
+    paddingTop: 32,
+    paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    // No longer used, kept for compatibility
   },
   titleContainer: {
     flex: 1,
@@ -498,6 +532,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#6B7280",
   },
+  memberPhone: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginTop: 2,
+  },
   notesSection: {
     marginBottom: 16,
   },
@@ -517,6 +556,31 @@ const styles = StyleSheet.create({
     color: "#374151",
     lineHeight: 20,
     fontStyle: "italic",
+  },
+  durationText: {
+    fontSize: 12,
+    color: "#8B5CF6",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  contactButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timestampSection: {
+    marginBottom: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  timestampText: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginBottom: 2,
   },
   actionButtons: {
     flexDirection: "row",

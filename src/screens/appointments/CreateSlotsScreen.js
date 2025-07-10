@@ -21,6 +21,7 @@ import { COLORS, SPACING, FONT_SIZES } from "../../constants";
 
 const CreateSlotsScreen = ({ navigation }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [tempDate, setTempDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,13 +45,7 @@ const CreateSlotsScreen = ({ navigation }) => {
     }
   }, [user]);
 
-  const onDateChange = (event, date) => {
-    setShowDatePicker(Platform.OS === "ios");
-    if (date) {
-      setSelectedDate(date);
-      generateSlotsForDate(date);
-    }
-  };
+  // No longer used: onDateChange
 
   const generateSlotsForDate = (date) => {
     // Generate default slots from 9 AM to 5 PM, 1-hour duration
@@ -91,7 +86,8 @@ const CreateSlotsScreen = ({ navigation }) => {
         endTime: slot.endTime,
       }));
 
-      await appointmentService.createTimeSlots(slotsToCreate);
+      // API expects { slots: [...] }
+      await appointmentService.createTimeSlots({ slots: slotsToCreate });
 
       Alert.alert("Thành công", "Đã tạo khung giờ thành công!", [
         {
@@ -154,31 +150,94 @@ const CreateSlotsScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={styles.dateButton}
+            style={styles.dateButtonModern}
+            activeOpacity={0.8}
             onPress={() => setShowDatePicker(true)}
           >
-            <View style={styles.dateButtonContent}>
-              <Ionicons name="calendar" size={20} color="#3B82F6" />
-              <Text style={styles.dateButtonText}>
-                {selectedDate.toLocaleDateString("vi-VN", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#6B7280" />
-            </View>
+            <Ionicons
+              name="calendar"
+              size={22}
+              color="#3B82F6"
+              style={{ marginRight: 12 }}
+            />
+            <Text style={styles.dateButtonTextModern}>
+              {selectedDate.toLocaleDateString("vi-VN", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </Text>
           </TouchableOpacity>
 
           {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="default"
-              onChange={onDateChange}
-              minimumDate={new Date()}
-            />
+            <View
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                marginTop: 12,
+                padding: 8,
+                elevation: 2,
+              }}
+            >
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={(event, date) => {
+                  if (Platform.OS === "android") {
+                    if (event.type === "set" && date) {
+                      setTempDate(date);
+                    }
+                  } else {
+                    if (date) setTempDate(date);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-end",
+                  marginTop: 12,
+                }}
+              >
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 18,
+                    marginRight: 8,
+                    borderRadius: 8,
+                    backgroundColor: "#E5E7EB",
+                  }}
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setTempDate(selectedDate);
+                  }}
+                >
+                  <Text style={{ color: "#374151", fontWeight: "600" }}>
+                    Hủy
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 18,
+                    borderRadius: 8,
+                    backgroundColor: "#3B82F6",
+                  }}
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setSelectedDate(tempDate);
+                    generateSlotsForDate(tempDate);
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>
+                    Xác nhận
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </View>
 
@@ -301,8 +360,10 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#fff",
     flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 20,
+    alignItems: "flex-end",
+    minHeight: 88,
+    paddingTop: 32,
+    paddingBottom: 16,
     paddingHorizontal: 24,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
@@ -310,22 +371,31 @@ const styles = StyleSheet.create({
   backButton: {
     marginRight: 16,
     padding: 4,
+    height: 40,
+    width: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerContent: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   titleContainer: {
     flex: 1,
+    justifyContent: "flex-end",
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 4,
+    marginBottom: 0,
+    lineHeight: 32,
   },
   subtitle: {
     fontSize: 14,
     color: "#6B7280",
+    marginTop: 2,
+    lineHeight: 20,
   },
   content: {
     flex: 1,
@@ -367,24 +437,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    backgroundColor: "#F9FAFB",
-  },
-  dateButtonContent: {
+  dateButtonModern: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  dateButtonText: {
+  dateButtonTextModern: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
     color: "#111827",
     flex: 1,
-    marginLeft: 12,
   },
   slotsGrid: {
     // Individual slot items have their own spacing
