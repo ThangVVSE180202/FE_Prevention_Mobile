@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { userService } from "../../services/api";
+import { appointmentService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
 
 const ConsultantListScreen = ({ navigation }) => {
@@ -26,8 +26,8 @@ const ConsultantListScreen = ({ navigation }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await userService.getConsultants();
-      setConsultants(response.data.data || []);
+      const response = await appointmentService.getConsultants();
+      setConsultants(response.data.consultantsList || []);
     } catch (err) {
       setError(err.message);
       Alert.alert("Lỗi", "Không thể tải danh sách chuyên viên tư vấn");

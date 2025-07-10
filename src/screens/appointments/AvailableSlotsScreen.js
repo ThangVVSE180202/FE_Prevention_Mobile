@@ -31,14 +31,17 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
       setLoading(true);
       setError(null);
       const response = await appointmentService.getConsultantSlots(
-        consultantId
+        consultantId,
+        { status: "available" }
       );
-      const slotsData = response.data.slots || [];
+      const slotsData = response.slots || [];
 
-      // Filter only available slots
-      const availableSlots = slotsData.filter(
-        (slot) => slot.status === "available"
-      );
+      // Filter only available slots that are not in the past
+      const availableSlots = slotsData.filter((slot) => {
+        const slotTime = new Date(slot.startTime);
+        const now = new Date();
+        return slot.status === "available" && slotTime > now;
+      });
 
       setSlots(availableSlots);
 
@@ -46,8 +49,17 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
       const grouped = appointmentService.groupSlotsByDate(availableSlots);
       setGroupedSlots(grouped);
     } catch (err) {
+      console.error("Error fetching available slots:", err);
       setError(err.message);
-      Alert.alert("Lỗi", "Không thể tải lịch khả dụng");
+
+      let errorMessage = "Không thể tải lịch khả dụng";
+      if (err.response?.status === 404) {
+        errorMessage = "Chuyên viên này không có lịch khả dụng";
+      } else if (err.response?.status === 403) {
+        errorMessage = "Bạn không có quyền xem lịch của chuyên viên này";
+      }
+
+      Alert.alert("Lỗi", errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);

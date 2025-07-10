@@ -109,6 +109,93 @@ class CourseService {
       search: searchTerm,
     });
   }
+
+  // Get course content (Enrolled users only) - NEW
+  async getCourseContent(courseId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.CONTENT(courseId),
+      {
+        method: HTTP_METHODS.GET,
+      }
+    );
+  }
+
+  // Get my enrolled courses - NEW
+  async getMyCourses() {
+    return authService.authenticatedRequest(ENDPOINTS.COURSES.MY_COURSES, {
+      method: HTTP_METHODS.GET,
+    });
+  }
+
+  // Parse course content for mobile display
+  parseCourseContent(content) {
+    // Simple markdown parser for mobile
+    const sections = content.split(/^# /gm).filter(Boolean);
+
+    return sections.map((section, index) => {
+      const lines = section.trim().split("\n");
+      const title = lines[0];
+      const content = lines.slice(1).join("\n").trim();
+
+      return {
+        id: index + 1,
+        title: title,
+        content: content,
+        type: "chapter",
+      };
+    });
+  }
+
+  // Check if user is enrolled in course
+  async checkEnrollmentStatus(courseId) {
+    try {
+      await this.getCourseContent(courseId);
+      return true; // If we can access content, user is enrolled
+    } catch (error) {
+      if (error.message.includes("đăng ký khóa học")) {
+        return false; // User not enrolled
+      }
+      throw error; // Other errors
+    }
+  }
+
+  // Format course data for display
+  formatCourseData(course) {
+    return {
+      ...course,
+      formattedDuration: this.formatDuration(course.duration),
+      formattedCreatedAt: new Date(course.createdAt).toLocaleDateString(
+        "vi-VN"
+      ),
+      authorName: course.author?.name || "Unknown Author",
+      topicsText: course.topics?.join(", ") || "",
+      targetAudienceText: this.getTargetAudienceText(course.targetAudience),
+    };
+  }
+
+  // Format duration in minutes to readable text
+  formatDuration(minutes) {
+    if (minutes < 60) {
+      return `${minutes} phút`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) {
+      return `${hours} giờ`;
+    }
+    return `${hours} giờ ${remainingMinutes} phút`;
+  }
+
+  // Get target audience display text
+  getTargetAudienceText(targetAudience) {
+    const audienceMap = {
+      student: "Học sinh",
+      university_student: "Sinh viên",
+      parent: "Phụ huynh",
+      teacher: "Giáo viên",
+    };
+    return audienceMap[targetAudience] || targetAudience;
+  }
 }
 
 export default new CourseService();

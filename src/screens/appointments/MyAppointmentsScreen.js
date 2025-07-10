@@ -28,7 +28,7 @@ const MyAppointmentsScreen = ({ navigation }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await appointmentService.getMyAppointments();
+      const response = await appointmentService.getMyBookings();
       setAppointments(response.data.appointments || []);
     } catch (err) {
       setError(err.message);
@@ -66,11 +66,32 @@ const MyAppointmentsScreen = ({ navigation }) => {
 
   const cancelAppointment = async (appointmentId) => {
     try {
-      await appointmentService.cancelAppointment(appointmentId);
-      Alert.alert("Thành công", "Lịch hẹn đã được hủy");
+      const response =
+        await appointmentService.cancelAppointmentSlot(appointmentId);
+      Alert.alert("Thành công", response.message || "Lịch hẹn đã được hủy");
       fetchMyAppointments(); // Refresh the list
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể hủy lịch hẹn. Vui lòng thử lại.");
+      const errorInfo = appointmentService.handleCancelError(error);
+
+      switch (errorInfo.type) {
+        case "daily_limit":
+          Alert.alert("Hết lượt hủy", errorInfo.message);
+          break;
+        case "cooldown":
+          Alert.alert(
+            "Cần chờ",
+            `Bạn cần đợi ${errorInfo.hours} giờ ${errorInfo.minutes} phút nữa để có thể hủy lịch tiếp theo`
+          );
+          break;
+        case "unauthorized":
+          Alert.alert("Không có quyền", "Bạn chỉ có thể hủy lịch hẹn của mình");
+          break;
+        default:
+          Alert.alert(
+            "Lỗi",
+            errorInfo.message || "Không thể hủy lịch hẹn. Vui lòng thử lại."
+          );
+      }
     }
   };
 

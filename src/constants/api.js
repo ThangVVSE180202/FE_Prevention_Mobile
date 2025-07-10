@@ -25,8 +25,10 @@ export const ENDPOINTS = {
   COURSES: {
     LIST: "/courses",
     DETAIL: (id) => `/courses/${id}`,
+    CONTENT: (id) => `/courses/${id}/content`,
     ENROLLMENTS: (courseId) => `/courses/${courseId}/enrollments`,
     REVIEWS: (courseId) => `/courses/${courseId}/reviews`,
+    MY_COURSES: "/enrollments/my-courses",
   },
 
   // Surveys
@@ -45,15 +47,19 @@ export const ENDPOINTS = {
   // Appointments
   APPOINTMENTS: {
     MY_SLOTS: "/appointment-slots/my-slots",
+    MY_BOOKINGS: "/appointment-slots/my-bookings",
     CONSULTANT_SLOTS: (consultantId) =>
       `/appointment-slots/consultant/${consultantId}`,
     BOOK_SLOT: (slotId) => `/appointment-slots/${slotId}/book`,
+    CANCEL_SLOT: (slotId) => `/appointment-slots/${slotId}/cancel`,
+    MARK_NO_SHOW: (slotId) => `/appointment-slots/${slotId}/mark-no-show`,
   },
 
   // Users
   USERS: {
     LIST: "/users",
     DETAIL: (id) => `/users/${id}`,
+    CONSULTANTS: "/users/consultants",
   },
 };
 

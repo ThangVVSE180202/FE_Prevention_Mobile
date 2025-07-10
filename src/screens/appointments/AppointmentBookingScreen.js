@@ -41,7 +41,9 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
   const bookAppointment = async () => {
     try {
       setLoading(true);
-      const response = await appointmentService.bookAppointmentSlot(slot._id);
+      const response = await appointmentService.bookAppointmentSlot(slot._id, {
+        notes: notes.trim() || undefined,
+      });
 
       Alert.alert(
         "Đặt lịch thành công!",
@@ -57,11 +59,31 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
         ]
       );
     } catch (error) {
+      console.error("Error booking appointment:", error);
+
       let errorMessage = "Không thể đặt lịch hẹn. Vui lòng thử lại.";
 
-      if (error.message.includes("409")) {
+      // Handle specific error cases
+      if (error.response?.status === 409) {
         errorMessage =
           "Rất tiếc, khung giờ này vừa có người khác đặt. Vui lòng chọn khung giờ khác.";
+      } else if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.message?.includes("daily limit")) {
+          errorMessage = `Bạn đã đạt giới hạn ${errorData.dailyLimit || 3} lịch hẹn trong ngày. Vui lòng thử lại vào ngày khác.`;
+        } else if (errorData.message?.includes("banned")) {
+          const unbanDate = errorData.unbanDate
+            ? new Date(errorData.unbanDate).toLocaleDateString("vi-VN")
+            : "";
+          errorMessage = `Tài khoản của bạn đã bị tạm khóa do hủy lịch quá nhiều lần. ${unbanDate ? `Bạn có thể đặt lịch lại từ ${unbanDate}.` : ""}`;
+        } else if (errorData.message?.includes("cooldown")) {
+          errorMessage = `Bạn vừa thực hiện thao tác gần đây. Vui lòng chờ ${errorData.cooldownMinutes || 30} phút trước khi đặt lịch tiếp.`;
+        } else if (errorData.message?.includes("slot not available")) {
+          errorMessage =
+            "Khung giờ này không còn khả dụng. Vui lòng chọn khung giờ khác.";
+        }
+      } else if (error.response?.status === 403) {
+        errorMessage = "Bạn không có quyền đặt lịch hẹn này.";
       }
 
       Alert.alert("Lỗi", errorMessage);

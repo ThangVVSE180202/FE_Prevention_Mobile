@@ -45,7 +45,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   const cancelAppointment = async () => {
     try {
       setLoading(true);
-      await appointmentService.cancelAppointment(appointment._id);
+      await appointmentService.cancelAppointmentSlot(appointment._id);
       Alert.alert("Thành công", "Lịch hẹn đã được hủy", [
         {
           text: "OK",
@@ -53,7 +53,29 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
         },
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể hủy lịch hẹn. Vui lòng thử lại.");
+      console.error("Error cancelling appointment:", error);
+
+      let errorMessage = "Không thể hủy lịch hẹn. Vui lòng thử lại.";
+
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.message?.includes("cooldown")) {
+          errorMessage = `Bạn đã hủy lịch gần đây. Vui lòng chờ ${errorData.cooldownMinutes || 30} phút trước khi thực hiện thao tác tiếp theo.`;
+        } else if (errorData.message?.includes("strike")) {
+          errorMessage = `Cảnh báo: Bạn đã nhận ${errorData.strikes || 1} cảnh báo do hủy lịch. ${errorData.strikes >= 3 ? "Tài khoản của bạn có thể bị tạm khóa." : ""}`;
+        } else if (errorData.message?.includes("banned")) {
+          const unbanDate = errorData.unbanDate
+            ? new Date(errorData.unbanDate).toLocaleDateString("vi-VN")
+            : "";
+          errorMessage = `Tài khoản của bạn đã bị tạm khóa do hủy lịch quá nhiều lần. ${unbanDate ? `Bạn có thể sử dụng lại từ ${unbanDate}.` : ""}`;
+        } else if (errorData.message?.includes("too late")) {
+          errorMessage =
+            "Không thể hủy lịch hẹn vào thời điểm này. Vui lòng liên hệ trực tiếp với chuyên viên.";
+        }
+      }
+
+      Alert.alert("Lỗi", errorMessage);
     } finally {
       setLoading(false);
     }
