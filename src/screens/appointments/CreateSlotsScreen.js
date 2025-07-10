@@ -133,15 +133,19 @@ const CreateSlotsScreen = ({ navigation }) => {
         >
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerTitle}>Tạo khung giờ mới</Text>
-          <Text style={styles.headerSubtitle}>
-            Thiết lập lịch tư vấn của bạn
-          </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>Tạo khung giờ mới</Text>
+            <Text style={styles.subtitle}>Thiết lập lịch tư vấn của bạn</Text>
+          </View>
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Date Selection */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -298,29 +302,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 20,
     paddingHorizontal: 24,
-    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
   backButton: {
     marginRight: 16,
+    padding: 4,
   },
-  headerTextContainer: {
+  headerContent: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 20,
+  titleContainer: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 24,
     fontWeight: "700",
     color: "#111827",
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  headerSubtitle: {
+  subtitle: {
     fontSize: 14,
     color: "#6B7280",
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 32,
   },
   section: {
     backgroundColor: "#fff",
@@ -333,9 +344,9 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.03,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 1,
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
@@ -357,7 +368,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   dateButton: {
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 12,
     backgroundColor: "#F9FAFB",
@@ -376,17 +387,18 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   slotsGrid: {
-    gap: 12,
+    // Individual slot items have their own spacing
   },
   slotItem: {
     backgroundColor: "#F9FAFB",
     padding: 16,
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "#E5E7EB",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginBottom: 8,
   },
   slotItemSelected: {
     backgroundColor: "#EFF6FF",
@@ -436,7 +448,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
   },
@@ -454,6 +467,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 32,
     paddingVertical: 64,
+    backgroundColor: "#fff",
+    marginHorizontal: 24,
+    marginTop: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   emptyIconContainer: {
     marginBottom: 24,

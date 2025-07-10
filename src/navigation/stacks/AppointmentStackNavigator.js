@@ -32,17 +32,26 @@ const AppointmentStackNavigator = () => {
       <Stack.Screen
         name="ConsultantList"
         component={ConsultantListScreen}
-        options={{ title: "Consultants" }}
+        options={{
+          title: "Consultants",
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="ConsultantDetail"
         component={ConsultantDetailScreen}
-        options={{ title: "Consultant Details" }}
+        options={{
+          title: "Consultant Details",
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="AvailableSlots"
         component={AvailableSlotsScreen}
-        options={{ title: "Available Slots" }}
+        options={{
+          title: "Available Slots",
+          headerShown: false,
+        }}
       />
 
       {/* Member-only screens */}
@@ -50,7 +59,10 @@ const AppointmentStackNavigator = () => {
         <Stack.Screen
           name="AppointmentBooking"
           component={AppointmentBookingScreen}
-          options={{ title: "Book Appointment" }}
+          options={{
+            title: "Book Appointment",
+            headerShown: false,
+          }}
         />
       )}
 
@@ -60,12 +72,18 @@ const AppointmentStackNavigator = () => {
           <Stack.Screen
             name="MySlots"
             component={MySlotsScreen}
-            options={{ title: "My Time Slots" }}
+            options={{
+              title: "My Time Slots",
+              headerShown: false,
+            }}
           />
           <Stack.Screen
             name="CreateSlots"
             component={CreateSlotsScreen}
-            options={{ title: "Create Time Slots" }}
+            options={{
+              title: "Create Time Slots",
+              headerShown: false,
+            }}
           />
         </>
       )}
@@ -74,12 +92,18 @@ const AppointmentStackNavigator = () => {
       <Stack.Screen
         name="AppointmentDetail"
         component={AppointmentDetailScreen}
-        options={{ title: "Appointment Details" }}
+        options={{
+          title: "Appointment Details",
+          headerShown: false,
+        }}
       />
       <Stack.Screen
         name="MyAppointments"
         component={MyAppointmentsScreen}
-        options={{ title: "My Appointments" }}
+        options={{
+          title: "My Appointments",
+          headerShown: false,
+        }}
       />
     </Stack.Navigator>
   );
