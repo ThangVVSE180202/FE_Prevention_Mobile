@@ -33,10 +33,23 @@ class AppointmentService {
 
   // Create time slots (Consultant only)
   async createTimeSlots(slotsData) {
-    return authService.authenticatedRequest(ENDPOINTS.APPOINTMENTS.MY_SLOTS, {
-      method: HTTP_METHODS.POST,
-      body: JSON.stringify(slotsData),
-    });
+    console.log("Creating time slots with data:", slotsData);
+
+    try {
+      const result = await authService.authenticatedRequest(
+        ENDPOINTS.APPOINTMENTS.MY_SLOTS,
+        {
+          method: HTTP_METHODS.POST,
+          body: JSON.stringify(slotsData),
+        }
+      );
+
+      console.log("Create slots result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error in createTimeSlots:", error);
+      throw error;
+    }
   }
 
   // Get available slots for a consultant (Public endpoint)
@@ -50,11 +63,12 @@ class AppointmentService {
   }
 
   // Book an appointment slot (Member only)
-  async bookAppointmentSlot(slotId) {
+  async bookAppointmentSlot(slotId, data = {}) {
     return authService.authenticatedRequest(
       ENDPOINTS.APPOINTMENTS.BOOK_SLOT(slotId),
       {
         method: HTTP_METHODS.PATCH,
+        body: JSON.stringify(data),
       }
     );
   }
@@ -197,6 +211,14 @@ class AppointmentService {
     const slots = [];
     const baseDate = new Date(date);
 
+    console.log("generateDaySlots input:", {
+      date,
+      startHour,
+      endHour,
+      slotDuration,
+    });
+    console.log("baseDate:", baseDate);
+
     for (let hour = startHour; hour < endHour; hour += slotDuration / 60) {
       const startTime = new Date(baseDate);
       startTime.setHours(Math.floor(hour), (hour % 1) * 60, 0, 0);
@@ -210,6 +232,7 @@ class AppointmentService {
       });
     }
 
+    console.log("Generated slots:", slots);
     return slots;
   }
 

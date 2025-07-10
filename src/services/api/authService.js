@@ -17,16 +17,25 @@ class AuthService {
 
     const requestOptions = { ...defaultOptions, ...options };
 
+    console.log("Making request to:", url);
+    console.log("Request options:", requestOptions);
+
     try {
       const response = await fetch(url, requestOptions);
       const data = await response.json();
 
+      console.log("Response status:", response.status);
+      console.log("Response data:", data);
+
       if (!response.ok) {
-        throw new Error(data.message || "Something went wrong");
+        const error = new Error(data.message || "Something went wrong");
+        error.response = { status: response.status, data };
+        throw error;
       }
 
       return data;
     } catch (error) {
+      console.error("Request error:", error);
       throw error;
     }
   }
@@ -123,9 +132,11 @@ class AuthService {
       throw new Error("No authentication token found");
     }
 
+    // Always set Content-Type to application/json
     const authOptions = {
       ...options,
       headers: {
+        "Content-Type": "application/json",
         ...options.headers,
         Authorization: `Bearer ${token}`,
       },

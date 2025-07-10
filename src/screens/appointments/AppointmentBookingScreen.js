@@ -66,27 +66,25 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
 
       let errorMessage = "Không thể đặt lịch hẹn. Vui lòng thử lại.";
 
-      // Handle specific error cases
+      // Handle specific error cases based on API documentation
       if (error.response?.status === 409) {
         errorMessage =
-          "Rất tiếc, khung giờ này vừa có người khác đặt. Vui lòng chọn khung giờ khác.";
-      } else if (error.response?.status === 400) {
-        const errorData = error.response.data;
-        if (errorData.message?.includes("daily limit")) {
-          errorMessage = `Bạn đã đạt giới hạn ${errorData.dailyLimit || 3} lịch hẹn trong ngày. Vui lòng thử lại vào ngày khác.`;
-        } else if (errorData.message?.includes("banned")) {
-          const unbanDate = errorData.unbanDate
-            ? new Date(errorData.unbanDate).toLocaleDateString("vi-VN")
-            : "";
-          errorMessage = `Tài khoản của bạn đã bị tạm khóa do hủy lịch quá nhiều lần. ${unbanDate ? `Bạn có thể đặt lịch lại từ ${unbanDate}.` : ""}`;
-        } else if (errorData.message?.includes("cooldown")) {
-          errorMessage = `Bạn vừa thực hiện thao tác gần đây. Vui lòng chờ ${errorData.cooldownMinutes || 30} phút trước khi đặt lịch tiếp.`;
-        } else if (errorData.message?.includes("slot not available")) {
-          errorMessage =
-            "Khung giờ này không còn khả dụng. Vui lòng chọn khung giờ khác.";
-        }
+          "Rất tiếc, khung giờ này vừa có người khác đặt hoặc không tồn tại.";
       } else if (error.response?.status === 403) {
-        errorMessage = "Bạn không có quyền đặt lịch hẹn này.";
+        const message = error.response?.data?.message || error.message || "";
+
+        if (message.includes("khoá chức năng đặt lịch")) {
+          errorMessage = "Bạn đã tạm thời bị khoá chức năng đặt lịch hẹn.";
+        } else if (message.includes("2 lịch cùng lúc")) {
+          errorMessage = "Bạn chỉ được đặt 2 lịch cùng lúc";
+        } else if (message.includes("30 phút")) {
+          errorMessage =
+            "Bạn cần đặt lịch trước ít nhất 30 phút. Vui lòng chọn slot khác hoặc thử lại sau.";
+        } else {
+          errorMessage = "Bạn không có quyền đặt lịch hẹn này.";
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
       Alert.alert("Lỗi", errorMessage);

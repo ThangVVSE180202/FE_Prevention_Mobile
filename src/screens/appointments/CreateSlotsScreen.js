@@ -43,13 +43,18 @@ const CreateSlotsScreen = ({ navigation }) => {
       navigation.goBack();
       return;
     }
+
+    // Generate initial slots for today
+    generateSlotsForDate(selectedDate);
   }, [user]);
 
   // No longer used: onDateChange
 
   const generateSlotsForDate = (date) => {
+    console.log("Generating slots for date:", date);
     // Generate default slots from 9 AM to 5 PM, 1-hour duration
     const generatedSlots = appointmentService.generateDaySlots(date, 9, 17, 60);
+    console.log("Generated slots:", generatedSlots);
     setSlots(generatedSlots.map((slot) => ({ ...slot, selected: false })));
   };
 
@@ -67,28 +72,19 @@ const CreateSlotsScreen = ({ navigation }) => {
       return;
     }
 
-    // Validate slots
-    const validationErrors = [];
-    selectedSlots.forEach((slot) => {
-      const errors = appointmentService.validateTimeSlot(slot);
-      validationErrors.push(...errors);
-    });
-
-    if (validationErrors.length > 0) {
-      Alert.alert("Lỗi", validationErrors[0]);
-      return;
-    }
+    // Revert to sending slots array as required by backend
+    const slotsToCreate = selectedSlots.map((slot) => ({
+      startTime: new Date(slot.startTime).toISOString(),
+      endTime: new Date(slot.endTime).toISOString(),
+    }));
 
     setLoading(true);
     try {
-      const slotsToCreate = selectedSlots.map((slot) => ({
-        startTime: new Date(slot.startTime).toISOString(),
-        endTime: new Date(slot.endTime).toISOString(),
-      }));
-
-      // API expects { slots: [...] }
-      await appointmentService.createTimeSlots({ slots: slotsToCreate });
-
+      console.log("Payload to send:", { slots: slotsToCreate });
+      const response = await appointmentService.createTimeSlots({
+        slots: slotsToCreate,
+      });
+      console.log("Create slots response:", response);
       Alert.alert("Thành công", "Đã tạo khung giờ thành công!", [
         {
           text: "OK",
@@ -96,7 +92,15 @@ const CreateSlotsScreen = ({ navigation }) => {
         },
       ]);
     } catch (error) {
-      Alert.alert("Lỗi", error.message || "Không thể tạo khung giờ");
+      console.error("Error creating slots:", error);
+      console.error("Error response:", error.response?.data);
+      let errorMessage = "Không thể tạo khung giờ";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      Alert.alert("Lỗi", errorMessage);
     } finally {
       setLoading(false);
     }
