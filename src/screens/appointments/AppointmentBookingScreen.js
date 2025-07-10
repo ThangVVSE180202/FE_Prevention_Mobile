@@ -35,7 +35,7 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
         },
         {
           text: "Xác nhận",
-          onPress: bookAppointment,
+          onPress: () => bookAppointment(),
         },
       ]
     );
@@ -97,15 +97,15 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
+      {/* Enhanced Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Xác nhận đặt lịch</Text>
@@ -232,30 +232,35 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#F9FAFB",
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    alignItems: "flex-end",
-    minHeight: 88,
-    paddingTop: 32,
+    alignItems: "center",
+    paddingTop: 16,
     paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backButton: {
     marginRight: 16,
-    padding: 4,
+    padding: 8,
+    borderRadius: 8,
   },
   headerContent: {
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 4,
   },
   subtitle: {

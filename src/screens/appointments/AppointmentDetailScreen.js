@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { appointmentService, userService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
 
@@ -125,9 +128,20 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       <View style={styles.header}>
-        <Text style={styles.title}>Chi tiết lịch hẹn</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Chi tiết lịch hẹn</Text>
+          <Text style={styles.subtitle}>Thông tin đầy đủ về cuộc hẹn</Text>
+        </View>
         <View
           style={[styles.statusBadge, { backgroundColor: statusInfo.color }]}
         >
@@ -135,186 +149,213 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <View style={styles.appointmentCard}>
-        <Text style={styles.cardTitle}>Thông tin lịch hẹn</Text>
+      <ScrollView style={styles.content}>
+        <View style={styles.appointmentCard}>
+          <Text style={styles.cardTitle}>Thông tin lịch hẹn</Text>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Ngày:</Text>
-          <Text style={styles.value}>{formattedSlot.formattedDate}</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Ngày:</Text>
+            <Text style={styles.value}>{formattedSlot.formattedDate}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Thời gian:</Text>
+            <Text style={styles.value}>{formattedSlot.formattedTimeRange}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Thời lượng:</Text>
+            <Text style={styles.value}>
+              {Math.round(
+                (new Date(appointment.endTime) -
+                  new Date(appointment.startTime)) /
+                  (1000 * 60)
+              )}{" "}
+              phút
+            </Text>
+          </View>
+
+          {formattedSlot.isToday && (
+            <View style={styles.todayNotice}>
+              <Text style={styles.todayText}>⚠️ Lịch hẹn hôm nay</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Thời gian:</Text>
-          <Text style={styles.value}>{formattedSlot.formattedTimeRange}</Text>
-        </View>
+        {appointment.consultant && (
+          <View style={styles.consultantCard}>
+            <Text style={styles.cardTitle}>Chuyên viên tư vấn</Text>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Thời lượng:</Text>
-          <Text style={styles.value}>
-            {Math.round(
-              (new Date(appointment.endTime) -
-                new Date(appointment.startTime)) /
-                (1000 * 60)
-            )}{" "}
-            phút
-          </Text>
-        </View>
+            <View style={styles.consultantInfo}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>
+                  {userService.getInitials(appointment.consultant.name)}
+                </Text>
+              </View>
 
-        {formattedSlot.isToday && (
-          <View style={styles.todayNotice}>
-            <Text style={styles.todayText}>⚠️ Lịch hẹn hôm nay</Text>
+              <View style={styles.consultantDetails}>
+                <Text style={styles.consultantName}>
+                  {appointment.consultant.name}
+                </Text>
+                <Text style={styles.consultantEmail}>
+                  {appointment.consultant.email}
+                </Text>
+                <Text style={styles.consultantRole}>
+                  {userService.getRoleName(appointment.consultant.role)}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.contactButton}
+              onPress={handleContactConsultant}
+            >
+              <Text style={styles.contactButtonText}>Liên hệ chuyên viên</Text>
+            </TouchableOpacity>
           </View>
         )}
-      </View>
 
-      {appointment.consultant && (
-        <View style={styles.consultantCard}>
-          <Text style={styles.cardTitle}>Chuyên viên tư vấn</Text>
-
-          <View style={styles.consultantInfo}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>
-                {userService.getInitials(appointment.consultant.name)}
-              </Text>
-            </View>
-
-            <View style={styles.consultantDetails}>
-              <Text style={styles.consultantName}>
-                {appointment.consultant.name}
-              </Text>
-              <Text style={styles.consultantEmail}>
-                {appointment.consultant.email}
-              </Text>
-              <Text style={styles.consultantRole}>
-                {userService.getRoleName(appointment.consultant.role)}
-              </Text>
-            </View>
+        {appointment.notes && (
+          <View style={styles.notesCard}>
+            <Text style={styles.cardTitle}>Ghi chú</Text>
+            <Text style={styles.notesText}>{appointment.notes}</Text>
           </View>
+        )}
 
-          <TouchableOpacity
-            style={styles.contactButton}
-            onPress={handleContactConsultant}
-          >
-            <Text style={styles.contactButtonText}>Liên hệ chuyên viên</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {appointment.notes && (
-        <View style={styles.notesCard}>
-          <Text style={styles.cardTitle}>Ghi chú</Text>
-          <Text style={styles.notesText}>{appointment.notes}</Text>
-        </View>
-      )}
-
-      <View style={styles.instructionsCard}>
-        <Text style={styles.cardTitle}>Hướng dẫn</Text>
-        <Text style={styles.instructionsText}>
-          {getAppointmentInstructions()}
-        </Text>
-
-        <Text style={styles.generalInstructions}>
-          {"\n"}Lưu ý chung:{"\n"}• Đến đúng giờ hẹn{"\n"}• Mang theo giấy tờ
-          tùy thân{"\n"}• Chuẩn bị các câu hỏi muốn thảo luận{"\n"}• Thông báo
-          trước nếu cần thay đổi lịch hẹn
-        </Text>
-      </View>
-
-      {canCancel && (
-        <TouchableOpacity
-          style={[styles.cancelButton, loading && styles.disabledButton]}
-          onPress={handleCancelAppointment}
-          disabled={loading}
-        >
-          <Text style={styles.cancelButtonText}>
-            {loading ? "Đang hủy..." : "Hủy lịch hẹn"}
+        <View style={styles.instructionsCard}>
+          <Text style={styles.cardTitle}>Hướng dẫn</Text>
+          <Text style={styles.instructionsText}>
+            {getAppointmentInstructions()}
           </Text>
-        </TouchableOpacity>
-      )}
 
-      <View style={styles.bottomPadding} />
-    </ScrollView>
+          <Text style={styles.generalInstructions}>
+            {"\n"}Lưu ý chung:{"\n"}• Đến đúng giờ hẹn{"\n"}• Mang theo giấy tờ
+            tùy thân{"\n"}• Chuẩn bị các câu hỏi muốn thảo luận{"\n"}• Thông báo
+            trước nếu cần thay đổi lịch hẹn
+          </Text>
+        </View>
+
+        {canCancel && (
+          <TouchableOpacity
+            style={[styles.cancelButton, loading && styles.disabledButton]}
+            onPress={handleCancelAppointment}
+            disabled={loading}
+          >
+            <Text style={styles.cancelButtonText}>
+              {loading ? "Đang hủy..." : "Hủy lịch hẹn"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.MD,
+    backgroundColor: "#F9FAFB",
   },
   header: {
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: SPACING.LG,
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  backButton: {
+    marginRight: 16,
+    padding: 8,
+    borderRadius: 8,
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: FONT_SIZES.HEADING,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6B7280",
   },
   statusBadge: {
-    paddingHorizontal: SPACING.SM,
-    paddingVertical: SPACING.XS,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   statusText: {
-    color: COLORS.WHITE,
-    fontSize: FONT_SIZES.SM,
+    color: "#FFFFFF",
+    fontSize: 12,
     fontWeight: "500",
   },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
   appointmentCard: {
-    backgroundColor: COLORS.WHITE,
-    padding: SPACING.MD,
-    borderRadius: 8,
-    marginBottom: SPACING.MD,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
     elevation: 2,
-    shadowColor: COLORS.BLACK,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   cardTitle: {
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.MD,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 16,
   },
   infoRow: {
     flexDirection: "row",
-    marginBottom: SPACING.SM,
+    marginBottom: 12,
   },
   label: {
-    fontSize: FONT_SIZES.MD,
-    color: COLORS.TEXT_SECONDARY,
+    fontSize: 14,
+    color: "#6B7280",
     fontWeight: "500",
     width: 100,
   },
   value: {
-    fontSize: FONT_SIZES.MD,
-    color: COLORS.TEXT_PRIMARY,
+    fontSize: 14,
+    color: "#1F2937",
     flex: 1,
     fontWeight: "600",
   },
   todayNotice: {
-    backgroundColor: COLORS.WARNING,
-    padding: SPACING.SM,
-    borderRadius: 4,
-    marginTop: SPACING.SM,
+    backgroundColor: "#F59E0B",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
   },
   todayText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
     textAlign: "center",
   },
   consultantCard: {
-    backgroundColor: COLORS.WHITE,
-    padding: SPACING.MD,
-    borderRadius: 8,
-    marginBottom: SPACING.MD,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
     elevation: 2,
-    shadowColor: COLORS.BLACK,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -322,101 +363,101 @@ const styles = StyleSheet.create({
   consultantInfo: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: SPACING.MD,
+    marginBottom: 16,
   },
   avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: COLORS.PRIMARY,
+    backgroundColor: "#3B82F6",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: SPACING.MD,
+    marginRight: 16,
   },
   avatarText: {
-    color: COLORS.WHITE,
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "600",
   },
   consultantDetails: {
     flex: 1,
   },
   consultantName: {
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.XS,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
   },
   consultantEmail: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.TEXT_SECONDARY,
-    marginBottom: SPACING.XS,
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 4,
   },
   consultantRole: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.PRIMARY,
+    fontSize: 14,
+    color: "#3B82F6",
     fontWeight: "500",
   },
   contactButton: {
-    backgroundColor: COLORS.SECONDARY,
-    paddingVertical: SPACING.SM,
-    borderRadius: 4,
+    backgroundColor: "#10B981",
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: "center",
   },
   contactButtonText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   notesCard: {
-    backgroundColor: COLORS.WHITE,
-    padding: SPACING.MD,
-    borderRadius: 8,
-    marginBottom: SPACING.MD,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
     elevation: 2,
-    shadowColor: COLORS.BLACK,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   notesText: {
-    fontSize: FONT_SIZES.MD,
-    color: COLORS.TEXT_PRIMARY,
+    fontSize: 14,
+    color: "#1F2937",
     lineHeight: 20,
   },
   instructionsCard: {
-    backgroundColor: COLORS.INFO,
-    padding: SPACING.MD,
-    borderRadius: 8,
-    marginBottom: SPACING.MD,
+    backgroundColor: "#3B82F6",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
   },
   instructionsText: {
-    fontSize: FONT_SIZES.MD,
-    color: COLORS.WHITE,
+    fontSize: 14,
+    color: "#FFFFFF",
     fontWeight: "500",
     lineHeight: 20,
   },
   generalInstructions: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.WHITE,
+    fontSize: 13,
+    color: "#FFFFFF",
     lineHeight: 18,
   },
   cancelButton: {
-    backgroundColor: COLORS.ERROR,
-    paddingVertical: SPACING.MD,
-    borderRadius: 8,
+    backgroundColor: "#EF4444",
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: "center",
-    marginBottom: SPACING.MD,
+    marginBottom: 16,
   },
   cancelButtonText: {
-    color: COLORS.WHITE,
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
   disabledButton: {
-    backgroundColor: COLORS.GRAY,
+    backgroundColor: "#9CA3AF",
   },
   bottomPadding: {
-    height: SPACING.LG,
+    height: 20,
   },
 });
 

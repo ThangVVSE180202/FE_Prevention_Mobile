@@ -82,8 +82,8 @@ const CreateSlotsScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const slotsToCreate = selectedSlots.map((slot) => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
+        startTime: new Date(slot.startTime).toISOString(),
+        endTime: new Date(slot.endTime).toISOString(),
       }));
 
       // API expects { slots: [...] }
@@ -119,7 +119,7 @@ const CreateSlotsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -355,47 +355,43 @@ const CreateSlotsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#F9FAFB",
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    alignItems: "flex-end",
-    minHeight: 88,
-    paddingTop: 32,
+    alignItems: "center",
+    paddingTop: 16,
     paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   backButton: {
     marginRight: 16,
-    padding: 4,
-    height: 40,
-    width: 40,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
   },
   headerContent: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   titleContainer: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 0,
-    lineHeight: 32,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
     color: "#6B7280",
-    marginTop: 2,
-    lineHeight: 20,
   },
   content: {
     flex: 1,

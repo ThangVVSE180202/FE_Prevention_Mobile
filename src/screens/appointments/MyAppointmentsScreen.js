@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { appointmentService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
 
@@ -161,43 +164,80 @@ const MyAppointmentsScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Text>Đang tải lịch hẹn của bạn...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.centerContainer}>
+          <Ionicons name="time-outline" size={48} color="#9CA3AF" />
+          <Text style={styles.loadingText}>Đang tải lịch hẹn của bạn...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Có lỗi xảy ra: {error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={fetchMyAppointments}
-        >
-          <Text style={styles.retryText}>Thử lại</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>Có lỗi xảy ra: {error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchMyAppointments}
+          >
+            <Ionicons name="refresh" size={16} color="#FFFFFF" />
+            <Text style={styles.retryText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (appointments.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>Bạn chưa có lịch hẹn nào</Text>
-        <TouchableOpacity
-          style={styles.bookButton}
-          onPress={() => navigation.navigate("ConsultantList")}
-        >
-          <Text style={styles.bookButtonText}>Đặt lịch hẹn</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>Lịch hẹn của tôi</Text>
+            <Text style={styles.subtitle}>Quản lý các cuộc hẹn tư vấn</Text>
+          </View>
+        </View>
+
+        <View style={styles.centerContainer}>
+          <Ionicons name="calendar-outline" size={64} color="#9CA3AF" />
+          <Text style={styles.emptyText}>Bạn chưa có lịch hẹn nào</Text>
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={() => navigation.navigate("ConsultantList")}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.bookButtonText}>Đặt lịch hẹn</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Lịch hẹn của tôi</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Lịch hẹn của tôi</Text>
+          <Text style={styles.subtitle}>Quản lý các cuộc hẹn tư vấn</Text>
+        </View>
+      </View>
+
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
+        <Text style={styles.statsText}>{appointments.length} lịch hẹn</Text>
+      </View>
 
       <FlatList
         data={appointments}
@@ -209,156 +249,166 @@ const MyAppointmentsScreen = ({ navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[COLORS.PRIMARY]}
+            tintColor="#3B82F6"
+            colors={["#3B82F6"]}
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.MD,
+    backgroundColor: "#F9FAFB",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.MD,
+    backgroundColor: "#F9FAFB",
+    padding: 32,
+  },
+  header: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: FONT_SIZES.HEADING,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.LG,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  statsContainer: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    gap: 8,
+  },
+  statsText: {
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 16,
+    textAlign: "center",
   },
   listContainer: {
-    paddingBottom: SPACING.LG,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   appointmentCard: {
-    backgroundColor: COLORS.WHITE,
-    padding: SPACING.MD,
-    borderRadius: 8,
-    marginBottom: SPACING.MD,
-    elevation: 2,
-    shadowColor: COLORS.BLACK,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   appointmentHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: SPACING.SM,
+    marginBottom: 16,
   },
   consultantInfo: {
     flex: 1,
-    marginRight: SPACING.SM,
+    marginRight: 16,
   },
   consultantName: {
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.XS,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
   },
   consultantEmail: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.TEXT_SECONDARY,
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 8,
   },
   statusBadge: {
-    paddingHorizontal: SPACING.SM,
-    paddingVertical: SPACING.XS,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   statusText: {
-    color: COLORS.WHITE,
-    fontSize: FONT_SIZES.SM,
-    fontWeight: "500",
-  },
-  appointmentDetails: {
-    marginBottom: SPACING.SM,
-  },
-  timeInfo: {
-    marginBottom: SPACING.SM,
-  },
-  dateText: {
-    fontSize: FONT_SIZES.MD,
-    color: COLORS.TEXT_PRIMARY,
+    color: "#FFFFFF",
+    fontSize: 12,
     fontWeight: "600",
   },
-  timeText: {
-    fontSize: FONT_SIZES.LG,
-    color: COLORS.PRIMARY,
-    fontWeight: "bold",
-    marginTop: SPACING.XS,
-  },
-  todayLabel: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.WARNING,
-    fontWeight: "500",
-    marginTop: SPACING.XS,
-  },
-  notesContainer: {
-    backgroundColor: COLORS.GRAY_LIGHT,
-    padding: SPACING.SM,
-    borderRadius: 4,
-  },
-  notesLabel: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.TEXT_SECONDARY,
-    fontWeight: "500",
-    marginBottom: SPACING.XS,
-  },
-  notesText: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.TEXT_PRIMARY,
-  },
-  cancelButton: {
-    backgroundColor: COLORS.ERROR,
-    paddingVertical: SPACING.SM,
-    borderRadius: 4,
-    alignItems: "center",
-  },
-  cancelButtonText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
-  },
   errorText: {
-    color: COLORS.ERROR,
+    color: "#EF4444",
     textAlign: "center",
-    marginBottom: SPACING.MD,
+    marginBottom: 16,
+    fontSize: 16,
+    marginTop: 16,
   },
   emptyText: {
-    color: COLORS.TEXT_SECONDARY,
+    color: "#6B7280",
     textAlign: "center",
-    marginBottom: SPACING.MD,
-    fontSize: FONT_SIZES.LG,
+    marginBottom: 24,
+    fontSize: 16,
+    marginTop: 16,
   },
   retryButton: {
-    backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: SPACING.LG,
-    paddingVertical: SPACING.SM,
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   retryText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
   bookButton: {
-    backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: SPACING.LG,
-    paddingVertical: SPACING.MD,
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   bookButtonText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
-    fontSize: FONT_SIZES.LG,
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
 

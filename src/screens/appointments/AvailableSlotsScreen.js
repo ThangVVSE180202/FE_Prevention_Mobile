@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   Alert,
   RefreshControl,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { appointmentService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
 
@@ -34,7 +37,11 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
         consultantId,
         { status: "available" }
       );
-      const slotsData = response.slots || [];
+      // Fix: Use response.data.slots for correct API structure
+      const slotsData =
+        response.data && Array.isArray(response.data.slots)
+          ? response.data.slots
+          : [];
 
       // Filter only available slots that are not in the past
       const availableSlots = slotsData.filter((slot) => {
@@ -128,23 +135,31 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Text>Đang tải lịch khả dụng...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.centerContainer}>
+          <Ionicons name="time-outline" size={48} color="#9CA3AF" />
+          <Text style={styles.loadingText}>Đang tải khung giờ...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Có lỗi xảy ra: {error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={fetchAvailableSlots}
-        >
-          <Text style={styles.retryText}>Thử lại</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.centerContainer}>
+          <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+          <Text style={styles.errorText}>Có lỗi xảy ra: {error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchAvailableSlots}
+          >
+            <Text style={styles.retryText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -152,24 +167,57 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
 
   if (dateKeys.length === 0) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.emptyText}>
-          {consultantName} hiện tại không có lịch khả dụng
-        </Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={fetchAvailableSlots}
-        >
-          <Text style={styles.retryText}>Làm mới</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        <View style={styles.centerContainer}>
+          <Ionicons name="calendar-outline" size={48} color="#9CA3AF" />
+          <Text style={styles.emptyText}>
+            {consultantName} hiện tại không có lịch khả dụng
+          </Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchAvailableSlots}
+          >
+            <Text style={styles.retryText}>Làm mới</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Lịch khả dụng</Text>
-      <Text style={styles.subtitle}>{consultantName}</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Enhanced Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Khung giờ khả dụng</Text>
+          <Text style={styles.subtitle}>
+            {consultantName
+              ? `Với ${consultantName}`
+              : "Chọn khung giờ phù hợp"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Stats Container */}
+      <View style={styles.statsContainer}>
+        <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
+        <Text style={styles.statsText}>
+          {Object.keys(groupedSlots).reduce(
+            (total, date) => total + groupedSlots[date].length,
+            0
+          )}{" "}
+          khung giờ khả dụng
+        </Text>
+      </View>
 
       <FlatList
         data={dateKeys}
@@ -181,114 +229,167 @@ const AvailableSlotsScreen = ({ route, navigation }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[COLORS.PRIMARY]}
+            tintColor="#3B82F6"
+            colors={["#3B82F6"]}
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.MD,
+    backgroundColor: "#F9FAFB",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.BACKGROUND,
-    padding: SPACING.MD,
+    backgroundColor: "#F9FAFB",
+    padding: 32,
+  },
+  header: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingTop: 16,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  backButton: {
+    marginRight: 16,
+    padding: 8,
+    borderRadius: 8,
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: FONT_SIZES.HEADING,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.XS,
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: FONT_SIZES.LG,
-    color: COLORS.TEXT_SECONDARY,
-    marginBottom: SPACING.LG,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+  statsContainer: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    gap: 8,
+  },
+  statsText: {
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#6B7280",
+    marginTop: 16,
+    textAlign: "center",
   },
   listContainer: {
-    paddingBottom: SPACING.LG,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
   dateSection: {
-    marginBottom: SPACING.LG,
+    marginBottom: 24,
   },
   dateHeader: {
-    fontSize: FONT_SIZES.LG,
-    fontWeight: "bold",
-    color: COLORS.TEXT_PRIMARY,
-    marginBottom: SPACING.SM,
-    paddingHorizontal: SPACING.SM,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 12,
+    paddingHorizontal: 4,
   },
   slotCard: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: COLORS.WHITE,
-    padding: SPACING.MD,
-    marginBottom: SPACING.SM,
-    borderRadius: 8,
-    elevation: 2,
-    shadowColor: COLORS.BLACK,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   pastSlot: {
-    backgroundColor: COLORS.GRAY_LIGHT,
+    backgroundColor: "#F9FAFB",
     opacity: 0.6,
   },
   timeContainer: {
     flex: 1,
   },
   timeText: {
-    fontSize: FONT_SIZES.LG,
+    fontSize: 16,
     fontWeight: "600",
-    color: COLORS.TEXT_PRIMARY,
+    color: "#1F2937",
   },
   todayLabel: {
-    fontSize: FONT_SIZES.SM,
-    color: COLORS.PRIMARY,
+    fontSize: 12,
+    color: "#3B82F6",
     fontWeight: "500",
-    marginTop: SPACING.XS,
+    marginTop: 4,
   },
   statusContainer: {
-    paddingHorizontal: SPACING.SM,
-    paddingVertical: SPACING.XS,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   statusText: {
-    color: COLORS.WHITE,
-    fontSize: FONT_SIZES.SM,
-    fontWeight: "500",
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
   },
   errorText: {
-    color: COLORS.ERROR,
+    color: "#EF4444",
     textAlign: "center",
-    marginBottom: SPACING.MD,
-    fontSize: FONT_SIZES.MD,
+    marginBottom: 16,
+    fontSize: 16,
+    marginTop: 16,
   },
   emptyText: {
-    color: COLORS.TEXT_SECONDARY,
+    color: "#6B7280",
     textAlign: "center",
-    marginBottom: SPACING.MD,
-    fontSize: FONT_SIZES.MD,
+    marginBottom: 24,
+    fontSize: 16,
+    marginTop: 16,
   },
   retryButton: {
-    backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: SPACING.LG,
-    paddingVertical: SPACING.SM,
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   retryText: {
-    color: COLORS.WHITE,
-    fontWeight: "bold",
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
   },
 });
 

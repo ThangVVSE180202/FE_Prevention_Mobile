@@ -77,7 +77,7 @@ const ConsultantListScreen = ({ navigation }) => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <View style={styles.centerContainer}>
           <View style={styles.loadingContainer}>
             <Ionicons name="people-outline" size={48} color="#E5E7EB" />
@@ -92,7 +92,7 @@ const ConsultantListScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -155,7 +155,7 @@ const ConsultantListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#F9FAFB",
   },
   centerContainer: {
     flex: 1,
@@ -172,24 +172,27 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    alignItems: "flex-end",
-    minHeight: 88,
-    paddingTop: 32,
+    alignItems: "center",
+    paddingTop: 16,
     paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   headerContent: {
     flex: 1,
-    justifyContent: "flex-end",
   },
   title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1F2937",
     marginBottom: 4,
   },
   subtitle: {
