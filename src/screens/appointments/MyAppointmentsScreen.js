@@ -16,15 +16,19 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { appointmentService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
+import { useAuth } from "../../context";
 
 const MyAppointmentsScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [appointments, setAppointments] = useState([]);
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchMyAppointments();
+    fetchUserProfile();
   }, []);
 
   const fetchMyAppointments = async () => {
@@ -42,9 +46,19 @@ const MyAppointmentsScreen = ({ navigation }) => {
     }
   };
 
+  const fetchUserProfile = async () => {
+    try {
+      const response = await appointmentService.getUserAppointmentStatus();
+      setUserProfile(response.data.data);
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchMyAppointments();
+    fetchUserProfile();
   };
 
   const handleCancelAppointment = (appointment) => {
@@ -73,6 +87,7 @@ const MyAppointmentsScreen = ({ navigation }) => {
         await appointmentService.cancelAppointmentSlot(appointmentId);
       Alert.alert("Thành công", response.message || "Lịch hẹn đã được hủy");
       fetchMyAppointments(); // Refresh the list
+      fetchUserProfile(); // Refresh user profile to update strikes/cancellation info
     } catch (error) {
       const errorInfo = appointmentService.handleCancelError(error);
 
@@ -104,8 +119,20 @@ const MyAppointmentsScreen = ({ navigation }) => {
 
   const renderAppointment = ({ item }) => {
     const formattedSlot = appointmentService.formatTimeSlot(item);
-    const statusInfo = appointmentService.getAppointmentStatus(item.status);
-    const canCancel = item.status === "booked" && !formattedSlot.isPast;
+    const statusInfo = appointmentService.getAppointmentStatus(
+      item.status,
+      item.isNoShow
+    );
+    const canCancel =
+      item.status === "booked" && !formattedSlot.isPast && !item.isNoShow;
+
+    // Check if user can cancel based on their current status
+    const cancellationLimits = userProfile
+      ? appointmentService.getUserCancellationLimits(userProfile)
+      : null;
+    const canCancelToday = cancellationLimits
+      ? cancellationLimits.canCancelToday && !cancellationLimits.isInCooldown
+      : true;
 
     return (
       <TouchableOpacity
@@ -130,34 +157,82 @@ const MyAppointmentsScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.appointmentDetails}>
-          <View style={styles.timeInfo}>
-            <Text style={styles.dateText}>{formattedSlot.formattedDate}</Text>
-            <Text style={styles.timeText}>
-              {formattedSlot.formattedTimeRange}
-            </Text>
-            {formattedSlot.isToday && (
-              <Text style={styles.todayLabel}>Hôm nay</Text>
-            )}
-          </View>
+          <View style={styles.timeInfoContainer}>
+            <View style={styles.dateContainer}>
+              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+              <Text style={styles.dateText}>{formattedSlot.formattedDate}</Text>
+              {formattedSlot.isToday && (
+                <View style={styles.todayBadge}>
+                  <Text style={styles.todayText}>Hôm nay</Text>
+                </View>
+              )}
+            </View>
 
-          {item.notes && (
-            <View style={styles.notesContainer}>
-              <Text style={styles.notesLabel}>Ghi chú:</Text>
-              <Text style={styles.notesText} numberOfLines={2}>
-                {item.notes}
+            <View style={styles.timeContainer}>
+              <Ionicons name="time-outline" size={16} color="#6B7280" />
+              <Text style={styles.timeText}>
+                {formattedSlot.formattedTimeRange}
               </Text>
             </View>
+          </View>
+
+          {/* Appointment Status Indicators */}
+          {item.isNoShow && (
+            <View style={styles.noShowWarning}>
+              <Ionicons name="warning" size={16} color="#EF4444" />
+              <Text style={styles.noShowText}>Đã đánh dấu không đến hẹn</Text>
+            </View>
           )}
+
+          {formattedSlot.isPast &&
+            !item.isNoShow &&
+            item.status === "booked" && (
+              <View style={styles.completedInfo}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={styles.completedText}>Đã hoàn thành</Text>
+              </View>
+            )}
         </View>
 
-        {canCancel && (
+        {/* Action Buttons */}
+        <View style={styles.actionContainer}>
+          {canCancel && (
+            <TouchableOpacity
+              style={[
+                styles.cancelButton,
+                !canCancelToday && styles.cancelButtonDisabled,
+              ]}
+              onPress={() => handleCancelAppointment(item)}
+              disabled={!canCancelToday}
+            >
+              <Ionicons
+                name="close-circle-outline"
+                size={16}
+                color={canCancelToday ? "#FFFFFF" : "#9CA3AF"}
+              />
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  !canCancelToday && styles.cancelButtonTextDisabled,
+                ]}
+              >
+                {canCancelToday ? "Hủy lịch hẹn" : "Không thể hủy"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => handleCancelAppointment(item)}
+            style={styles.detailButton}
+            onPress={() => handleViewDetails(item)}
           >
-            <Text style={styles.cancelButtonText}>Hủy lịch hẹn</Text>
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color="#3B82F6"
+            />
+            <Text style={styles.detailButtonText}>Chi tiết</Text>
           </TouchableOpacity>
-        )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -198,8 +273,14 @@ const MyAppointmentsScreen = ({ navigation }) => {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-        {/* Header */}
+        {/* Header with back button */}
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#1F2937" />
+          </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={styles.title}>Lịch hẹn của tôi</Text>
             <Text style={styles.subtitle}>Quản lý các cuộc hẹn tư vấn</Text>
@@ -225,18 +306,109 @@ const MyAppointmentsScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
+      {/* Header with back button */}
       <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#1F2937" />
+        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Lịch hẹn của tôi</Text>
           <Text style={styles.subtitle}>Quản lý các cuộc hẹn tư vấn</Text>
         </View>
       </View>
 
-      {/* Stats */}
+      {/* Stats with integrated status */}
       <View style={styles.statsContainer}>
-        <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
-        <Text style={styles.statsText}>{appointments.length} lịch hẹn</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statsItem}>
+            <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
+            <Text style={styles.statsText}>{appointments.length} lịch hẹn</Text>
+          </View>
+
+          {userProfile && (
+            <View style={styles.statusRow}>
+              <View style={styles.statusItem}>
+                <Text style={styles.statusLabel}>Cảnh cáo</Text>
+                <Text
+                  style={[
+                    styles.statusValue,
+                    appointmentService.getUserStrikesInfo(userProfile)
+                      .currentStrikes >= 2
+                      ? styles.warningText
+                      : styles.normalText,
+                  ]}
+                >
+                  {
+                    appointmentService.getUserStrikesInfo(userProfile)
+                      .currentStrikes
+                  }
+                  /3
+                </Text>
+              </View>
+
+              <View style={styles.statusItem}>
+                <Text style={styles.statusLabel}>Hủy hôm nay</Text>
+                <Text
+                  style={[
+                    styles.statusValue,
+                    appointmentService.getUserCancellationLimits(userProfile)
+                      .dailyCancellations >= 2
+                      ? styles.warningText
+                      : styles.normalText,
+                  ]}
+                >
+                  {
+                    appointmentService.getUserCancellationLimits(userProfile)
+                      .dailyCancellations
+                  }
+                  /3
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* Status warnings if any */}
+        {userProfile &&
+          (() => {
+            const strikesInfo =
+              appointmentService.getUserStrikesInfo(userProfile);
+            const cancellationLimits =
+              appointmentService.getUserCancellationLimits(userProfile);
+            const banInfo = appointmentService.formatBanInfo(
+              strikesInfo.banUntil
+            );
+            const cooldownInfo = appointmentService.getCooldownInfo(
+              cancellationLimits.cooldownUntil
+            );
+
+            if (banInfo) {
+              return (
+                <View style={styles.inlineWarning}>
+                  <Ionicons name="ban" size={16} color="#EF4444" />
+                  <Text style={styles.inlineWarningText}>
+                    {banInfo.message}
+                  </Text>
+                </View>
+              );
+            }
+
+            if (cooldownInfo) {
+              return (
+                <View style={styles.inlineWarning}>
+                  <Ionicons name="time" size={16} color="#F59E0B" />
+                  <Text style={styles.inlineWarningText}>
+                    {cooldownInfo.message}
+                  </Text>
+                </View>
+              );
+            }
+
+            return null;
+          })()}
       </View>
 
       <FlatList
@@ -285,6 +457,11 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  backButton: {
+    marginRight: 16,
+    padding: 8,
+    borderRadius: 8,
+  },
   headerContent: {
     flex: 1,
   },
@@ -298,20 +475,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
   },
+
   statsContainer: {
     backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  statsItem: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   statsText: {
     fontSize: 14,
     color: "#374151",
     fontWeight: "500",
+  },
+  statusRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  statusItem: {
+    alignItems: "center",
+  },
+  statusLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginBottom: 2,
+  },
+  statusValue: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  normalText: {
+    color: "#10B981",
+  },
+  warningText: {
+    color: "#F59E0B",
+  },
+  inlineWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    padding: 8,
+    borderRadius: 6,
+    gap: 6,
+    marginTop: 8,
+  },
+  inlineWarningText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "500",
+    flex: 1,
   },
   loadingText: {
     fontSize: 16,
@@ -366,6 +589,111 @@ const styles = StyleSheet.create({
   statusText: {
     color: "#FFFFFF",
     fontSize: 12,
+    fontWeight: "600",
+  },
+  appointmentDetails: {
+    marginBottom: 10,
+  },
+  timeInfoContainer: {
+    gap: 8,
+  },
+  dateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dateText: {
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  todayBadge: {
+    backgroundColor: "#DBEAFE",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  todayText: {
+    fontSize: 10,
+    color: "#3B82F6",
+    fontWeight: "600",
+  },
+  timeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  timeText: {
+    fontSize: 16,
+    color: "#1F2937",
+    fontWeight: "600",
+  },
+  noShowWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    padding: 8,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 8,
+  },
+  noShowText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  completedInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
+    padding: 8,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 8,
+  },
+  completedText: {
+    color: "#10B981",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  actionContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  cancelButton: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  cancelButtonDisabled: {
+    backgroundColor: "#F3F4F6",
+  },
+  cancelButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  cancelButtonTextDisabled: {
+    color: "#9CA3AF",
+  },
+  detailButton: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  detailButtonText: {
+    color: "#3B82F6",
+    fontSize: 14,
     fontWeight: "600",
   },
   errorText: {

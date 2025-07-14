@@ -148,11 +148,36 @@ const ConsultantListScreen = ({ navigation }) => {
           )
         }
       />
+      {/* Floating circular button for My Appointments */}
+      <TouchableOpacity
+        style={styles.fabButton}
+        onPress={() => navigation.navigate("MyAppointments")}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="calendar-outline" size={28} color="#fff" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  fabButton: {
+    position: "absolute",
+    bottom: 32,
+    right: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#3B82F6",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 6,
+    zIndex: 10,
+  },
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
