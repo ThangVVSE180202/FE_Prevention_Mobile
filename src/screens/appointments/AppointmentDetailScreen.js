@@ -222,17 +222,71 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
           </View>
         )}
 
-        <View style={styles.instructionsCard}>
-          <Text style={styles.cardTitle}>Hướng dẫn</Text>
-          <Text style={styles.instructionsText}>
-            {getAppointmentInstructions()}
-          </Text>
-
-          <Text style={styles.generalInstructions}>
-            {"\n"}Lưu ý chung:{"\n"}• Đến đúng giờ hẹn{"\n"}• Mang theo giấy tờ
-            tùy thân{"\n"}• Chuẩn bị các câu hỏi muốn thảo luận{"\n"}• Thông báo
-            trước nếu cần thay đổi lịch hẹn
-          </Text>
+        <View style={styles.instructionsCardBetter}>
+          <View style={styles.instructionsHeaderRow}>
+            <Ionicons
+              name="information-circle-outline"
+              size={22}
+              color="#3B82F6"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.instructionsTitle}>Hướng dẫn & Lưu ý</Text>
+          </View>
+          <View style={styles.instructionsContentRow}>
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color="#10B981"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={styles.instructionsMainText}>
+              {getAppointmentInstructions()}
+            </Text>
+          </View>
+          <View style={styles.instructionsList}>
+            <View style={styles.instructionsListItem}>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color="#3B82F6"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.instructionsListText}>Đến đúng giờ hẹn</Text>
+            </View>
+            <View style={styles.instructionsListItem}>
+              <Ionicons
+                name="id-card-outline"
+                size={16}
+                color="#3B82F6"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.instructionsListText}>
+                Mang theo giấy tờ tùy thân
+              </Text>
+            </View>
+            <View style={styles.instructionsListItem}>
+              <Ionicons
+                name="help-circle-outline"
+                size={16}
+                color="#3B82F6"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.instructionsListText}>
+                Chuẩn bị các câu hỏi muốn thảo luận
+              </Text>
+            </View>
+            <View style={styles.instructionsListItem}>
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={16}
+                color="#3B82F6"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.instructionsListText}>
+                Thông báo trước nếu cần thay đổi lịch hẹn
+              </Text>
+            </View>
+          </View>
         </View>
 
         {canCancel && (
@@ -424,22 +478,54 @@ const styles = StyleSheet.create({
     color: "#1F2937",
     lineHeight: 20,
   },
-  instructionsCard: {
-    backgroundColor: "#3B82F6",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+  instructionsCardBetter: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  instructionsText: {
+  instructionsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  instructionsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2563EB",
+  },
+  instructionsContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  instructionsMainText: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#374151",
     fontWeight: "500",
+    flex: 1,
     lineHeight: 20,
   },
-  generalInstructions: {
+  instructionsList: {
+    marginTop: 2,
+  },
+  instructionsListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 7,
+  },
+  instructionsListText: {
     fontSize: 13,
-    color: "#FFFFFF",
+    color: "#374151",
     lineHeight: 18,
+    flex: 1,
   },
   cancelButton: {
     backgroundColor: "#EF4444",
