@@ -1,7 +1,7 @@
 // 📝 Appointment Booking Screen
 // Confirm and book an appointment slot
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,22 +9,54 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  TextInput,
   SafeAreaView,
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { appointmentService } from "../../services/api";
 import { COLORS, SPACING, FONT_SIZES } from "../../constants";
+import { useAuth } from "../../context";
 
 const AppointmentBookingScreen = ({ route, navigation }) => {
+  const { user } = useAuth();
   const { slot, consultantId, consultantName } = route.params;
-  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   const formattedSlot = appointmentService.formatTimeSlot(slot);
 
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await appointmentService.getUserAppointmentStatus();
+      setUserProfile(response.data.data);
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+    }
+  };
+
   const handleConfirmBooking = async () => {
+    // Check if user can book appointments
+    if (
+      userProfile &&
+      !appointmentService.canUserBookAppointments(userProfile)
+    ) {
+      const strikesInfo = appointmentService.getUserStrikesInfo(userProfile);
+      const banInfo = appointmentService.formatBanInfo(strikesInfo.banUntil);
+
+      Alert.alert(
+        "Không thể đặt lịch",
+        banInfo
+          ? banInfo.message
+          : "Tài khoản của bạn hiện không thể đặt lịch hẹn.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     Alert.alert(
       "Xác nhận đặt lịch",
       `Bạn có chắc chắn muốn đặt lịch hẹn vào ${formattedSlot.formattedTimeRange} ngày ${formattedSlot.formattedDate} với ${consultantName}?`,
@@ -44,9 +76,7 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
   const bookAppointment = async () => {
     try {
       setLoading(true);
-      const response = await appointmentService.bookAppointmentSlot(slot._id, {
-        notes: notes.trim() || undefined,
-      });
+      const response = await appointmentService.bookAppointmentSlot(slot._id);
 
       Alert.alert(
         "Đặt lịch thành công!",
@@ -64,30 +94,32 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error("Error booking appointment:", error);
 
-      let errorMessage = "Không thể đặt lịch hẹn. Vui lòng thử lại.";
+      const errorInfo = appointmentService.handleBookingError(error);
 
-      // Handle specific error cases based on API documentation
-      if (error.response?.status === 409) {
-        errorMessage =
-          "Rất tiếc, khung giờ này vừa có người khác đặt hoặc không tồn tại.";
-      } else if (error.response?.status === 403) {
-        const message = error.response?.data?.message || error.message || "";
-
-        if (message.includes("khoá chức năng đặt lịch")) {
-          errorMessage = "Bạn đã tạm thời bị khoá chức năng đặt lịch hẹn.";
-        } else if (message.includes("2 lịch cùng lúc")) {
-          errorMessage = "Bạn chỉ được đặt 2 lịch cùng lúc";
-        } else if (message.includes("30 phút")) {
-          errorMessage =
-            "Bạn cần đặt lịch trước ít nhất 30 phút. Vui lòng chọn slot khác hoặc thử lại sau.";
-        } else {
-          errorMessage = "Bạn không có quyền đặt lịch hẹn này.";
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
+      switch (errorInfo.type) {
+        case "banned":
+          Alert.alert("Tài khoản bị khóa", errorInfo.message);
+          break;
+        case "limit_exceeded":
+          Alert.alert("Quá giới hạn", errorInfo.message);
+          break;
+        case "time_warning":
+          Alert.alert("Thời gian không hợp lệ", errorInfo.message);
+          break;
+        case "conflict":
+          Alert.alert(
+            "Xung đột lịch hẹn",
+            "Khung giờ này đã được đặt bởi người khác. Vui lòng chọn khung giờ khác."
+          );
+          // Go back to refresh the slots
+          navigation.goBack();
+          break;
+        default:
+          Alert.alert(
+            "Lỗi",
+            errorInfo.message || "Không thể đặt lịch hẹn. Vui lòng thử lại."
+          );
       }
-
-      Alert.alert("Lỗi", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -167,29 +199,68 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Notes Card */}
-        <View style={styles.notesCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Ionicons name="document-text" size={20} color="#3B82F6" />
+        {/* User Status Card */}
+        {userProfile && (
+          <View style={styles.statusCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardIcon}>
+                <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
+              </View>
+              <Text style={styles.cardTitle}>Trạng thái tài khoản</Text>
             </View>
-            <Text style={styles.cardTitle}>Ghi chú (tùy chọn)</Text>
-          </View>
-          <Text style={styles.notesDescription}>
-            Mô tả ngắn gọn về vấn đề bạn muốn tư vấn hoặc những điều bạn muốn
-            thảo luận.
-          </Text>
 
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Nhập ghi chú của bạn..."
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
+            {(() => {
+              const strikesInfo =
+                appointmentService.getUserStrikesInfo(userProfile);
+              const cancellationLimits =
+                appointmentService.getUserCancellationLimits(userProfile);
+              const banInfo = appointmentService.formatBanInfo(
+                strikesInfo.banUntil
+              );
+
+              if (banInfo) {
+                return (
+                  <View style={styles.banWarning}>
+                    <Ionicons name="ban" size={16} color="#EF4444" />
+                    <Text style={styles.banText}>{banInfo.message}</Text>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={styles.statusGrid}>
+                  <View style={styles.statusItem}>
+                    <Text style={styles.statusLabel}>Cảnh cáo</Text>
+                    <Text
+                      style={[
+                        styles.statusValue,
+                        strikesInfo.currentStrikes >= 2
+                          ? styles.warningText
+                          : styles.normalText,
+                      ]}
+                    >
+                      {strikesInfo.currentStrikes}/3
+                    </Text>
+                  </View>
+
+                  <View style={styles.statusItem}>
+                    <Text style={styles.statusLabel}>Hủy lịch hôm nay</Text>
+                    <Text
+                      style={[
+                        styles.statusValue,
+                        cancellationLimits.dailyCancellations >= 2
+                          ? styles.warningText
+                          : styles.normalText,
+                      ]}
+                    >
+                      {cancellationLimits.dailyCancellations}/3
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
 
         <View style={styles.importantNotice}>
           <Text style={styles.noticeTitle}>Lưu ý quan trọng</Text>
@@ -213,12 +284,27 @@ const AppointmentBookingScreen = ({ route, navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.confirmButton, loading && styles.disabledButton]}
+            style={[
+              styles.confirmButton,
+              (loading ||
+                (userProfile &&
+                  !appointmentService.canUserBookAppointments(userProfile))) &&
+                styles.disabledButton,
+            ]}
             onPress={handleConfirmBooking}
-            disabled={loading}
+            disabled={
+              loading ||
+              (userProfile &&
+                !appointmentService.canUserBookAppointments(userProfile))
+            }
           >
             <Text style={styles.confirmButtonText}>
-              {loading ? "Đang đặt lịch..." : "Xác nhận đặt lịch"}
+              {loading
+                ? "Đang đặt lịch..."
+                : userProfile &&
+                    !appointmentService.canUserBookAppointments(userProfile)
+                  ? "Không thể đặt lịch"
+                  : "Xác nhận đặt lịch"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -360,6 +446,55 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
+  statusCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  statusGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  statusItem: {
+    alignItems: "center",
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  statusValue: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  normalText: {
+    color: "#10B981",
+  },
+  warningText: {
+    color: "#F59E0B",
+  },
+  banWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  banText: {
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
   notesDescription: {
     fontSize: 14,
     color: "#6B7280",
@@ -420,6 +555,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#9CA3AF",
   },
   confirmButtonText: {
     color: "#fff",

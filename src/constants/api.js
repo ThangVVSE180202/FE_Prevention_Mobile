@@ -68,6 +68,7 @@ export const ENDPOINTS = {
     LIST: "/users",
     DETAIL: (id) => `/users/${id}`,
     CONSULTANTS: "/users/consultants",
+    ME: "/users/me",
   },
 };
 
