@@ -117,6 +117,88 @@ class AppointmentService {
     });
   }
 
+  // Get current user's appointment profile and status
+  async getUserAppointmentStatus() {
+    return authService.authenticatedRequest(ENDPOINTS.USERS.ME, {
+      method: HTTP_METHODS.GET,
+    });
+  }
+
+  // Check if user can book appointments (not banned)
+  canUserBookAppointments(userProfile) {
+    const appointmentProfile = userProfile?.appointmentProfile || {};
+    return !appointmentProfile.isBanned;
+  }
+
+  // Get user strikes information
+  getUserStrikesInfo(userProfile) {
+    const appointmentProfile = userProfile?.appointmentProfile || {};
+    return {
+      currentStrikes: appointmentProfile.strikes || 0,
+      maxStrikes: 3,
+      isBanned: appointmentProfile.isBanned || false,
+      banUntil: appointmentProfile.banUntil,
+    };
+  }
+
+  // Get user cancellation limits
+  getUserCancellationLimits(userProfile) {
+    const appointmentProfile = userProfile?.appointmentProfile || {};
+    const cancelPolicy = appointmentProfile.cancelPolicy || {};
+
+    return {
+      dailyCancellations: cancelPolicy.dailyCount || 0,
+      maxDailyCancellations: 3,
+      cooldownUntil: cancelPolicy.cooldownUntil,
+      canCancelToday: (cancelPolicy.dailyCount || 0) < 3,
+      isInCooldown: cancelPolicy.cooldownUntil
+        ? new Date(cancelPolicy.cooldownUntil) > new Date()
+        : false,
+    };
+  }
+
+  // Format ban information for display
+  formatBanInfo(banUntil) {
+    if (!banUntil) return null;
+
+    const banDate = new Date(banUntil);
+    const now = new Date();
+
+    if (banDate <= now) return null;
+
+    const daysLeft = Math.ceil((banDate - now) / (1000 * 60 * 60 * 24));
+
+    return {
+      banUntil: banDate,
+      daysLeft,
+      formattedDate: banDate.toLocaleDateString("vi-VN"),
+      message: `Tài khoản bị khóa đến ${banDate.toLocaleDateString(
+        "vi-VN"
+      )} (còn ${daysLeft} ngày)`,
+    };
+  }
+
+  // Get cooldown information
+  getCooldownInfo(cooldownUntil) {
+    if (!cooldownUntil) return null;
+
+    const cooldownDate = new Date(cooldownUntil);
+    const now = new Date();
+
+    if (cooldownDate <= now) return null;
+
+    const msLeft = cooldownDate - now;
+    const hoursLeft = Math.floor(msLeft / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+    return {
+      cooldownUntil: cooldownDate,
+      hoursLeft,
+      minutesLeft,
+      message: `Có thể hủy lịch sau ${hoursLeft}h ${minutesLeft}m`,
+    };
+  }
+
   // Format time slot for display
   formatTimeSlot(slot) {
     const startTime = new Date(slot.startTime);

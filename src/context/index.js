@@ -7,5 +7,3 @@
 // - ThemeContext.js - Theme and appearance settings
 
 export { AuthProvider, useAuth } from "./AuthContext";
-export { AppProvider, useApp } from "./AppContext";
-export { ThemeProvider, useTheme } from "./ThemeContext";

@@ -94,6 +94,37 @@ class CourseService {
     });
   }
 
+  // Get user's review for a course (Authenticated)
+  async getUserReview(courseId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.MY_REVIEW(courseId),
+      {
+        method: HTTP_METHODS.GET,
+      }
+    );
+  }
+
+  // Update user's review (Authenticated)
+  async updateCourseReview(courseId, reviewId, reviewData) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.UPDATE_REVIEW(courseId, reviewId),
+      {
+        method: HTTP_METHODS.PATCH, // Đổi từ PUT thành PATCH
+        body: JSON.stringify(reviewData),
+      }
+    );
+  }
+
+  // Delete user's review (Authenticated)
+  async deleteCourseReview(courseId, reviewId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.DELETE_REVIEW(courseId, reviewId),
+      {
+        method: HTTP_METHODS.DELETE,
+      }
+    );
+  }
+
   // Get courses by target audience
   async getCoursesByAudience(targetAudience, params = {}) {
     return this.getCourses({
@@ -110,7 +141,76 @@ class CourseService {
     });
   }
 
-  // Get course content (Enrolled users only) - NEW
+  // Get user's enrolled courses (Authenticated)
+  async getMyEnrolledCourses() {
+    return authService.authenticatedRequest(ENDPOINTS.COURSES.MY_COURSES, {
+      method: HTTP_METHODS.GET,
+    });
+  }
+
+  // Get course progress (Authenticated)
+  async getCourseProgress(courseId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.PROGRESS(courseId),
+      {
+        method: HTTP_METHODS.GET,
+      }
+    );
+  }
+
+  // Update course progress (Authenticated)
+  async updateCourseProgress(courseId, progressData) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.PROGRESS(courseId),
+      {
+        method: HTTP_METHODS.PATCH,
+        body: JSON.stringify(progressData),
+      }
+    );
+  }
+
+  // Get favorite courses (Authenticated)
+  async getFavoriteCourses() {
+    return authService.authenticatedRequest(ENDPOINTS.COURSES.FAVORITES, {
+      method: HTTP_METHODS.GET,
+    });
+  }
+
+  // Add course to favorites (Authenticated)
+  async addToFavorites(courseId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.TOGGLE_FAVORITE(courseId),
+      {
+        method: HTTP_METHODS.POST,
+      }
+    );
+  }
+
+  // Remove course from favorites (Authenticated)
+  async removeFromFavorites(courseId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.TOGGLE_FAVORITE(courseId),
+      {
+        method: HTTP_METHODS.DELETE,
+      }
+    );
+  }
+
+  // Check if course is favorited (Authenticated)
+  async isFavorite(courseId) {
+    try {
+      return authService.authenticatedRequest(
+        ENDPOINTS.COURSES.IS_FAVORITE(courseId),
+        {
+          method: HTTP_METHODS.GET,
+        }
+      );
+    } catch (error) {
+      return { isFavorite: false };
+    }
+  }
+
+  // Get course content/modules (Authenticated for enrolled courses)
   async getCourseContent(courseId) {
     return authService.authenticatedRequest(
       ENDPOINTS.COURSES.CONTENT(courseId),
@@ -120,11 +220,14 @@ class CourseService {
     );
   }
 
-  // Get my enrolled courses - NEW
-  async getMyCourses() {
-    return authService.authenticatedRequest(ENDPOINTS.COURSES.MY_COURSES, {
-      method: HTTP_METHODS.GET,
-    });
+  // Mark content as completed (Authenticated)
+  async markContentCompleted(courseId, contentId) {
+    return authService.authenticatedRequest(
+      ENDPOINTS.COURSES.MARK_COMPLETED(courseId, contentId),
+      {
+        method: HTTP_METHODS.POST,
+      }
+    );
   }
 
   // Parse course content for mobile display
