@@ -7,7 +7,7 @@ import AppointmentStackNavigator from "./stacks/AppointmentStackNavigator";
 import { useAuth } from "../context/AuthContext";
 // import CoursesScreen from "../screens/courses/CoursesScreen";
 // import SurveysScreen from "../screens/surveys/SurveysScreen";
-// import ProfileScreen from "../screens/profile/ProfileScreen";
+import ProfileScreen from "../screens/profile/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -53,8 +53,8 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Home" component={HomePage} />
       <Tab.Screen name="Appointments" component={AppointmentStackNavigator} />
       {/* <Tab.Screen name="Courses" component={CoursesScreen} />
-      <Tab.Screen name="Surveys" component={SurveysScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} /> */}
+      <Tab.Screen name="Surveys" component={SurveysScreen} /> */}
+      <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 };
