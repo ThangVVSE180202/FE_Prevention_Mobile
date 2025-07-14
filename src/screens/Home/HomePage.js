@@ -129,7 +129,11 @@ const HomeScreen = () => {
   ];
 
   const handleCoursePress = (course) => {
-    navigation.navigate("CourseDetail", { id: course.id });
+    // Navigate to Courses tab first, then to specific course detail
+    navigation.navigate("Courses", {
+      screen: "CourseList",
+      params: { highlightCourse: course.id },
+    });
   };
 
   return (

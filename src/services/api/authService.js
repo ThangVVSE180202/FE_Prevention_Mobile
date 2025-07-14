@@ -22,20 +22,63 @@ class AuthService {
 
     try {
       const response = await fetch(url, requestOptions);
-      const data = await response.json();
 
       console.log("Response status:", response.status);
-      console.log("Response data:", data);
 
       if (!response.ok) {
-        const error = new Error(data.message || "Something went wrong");
-        error.response = { status: response.status, data };
+        // Cố gắng parse JSON cho error response
+        let errorData;
+        try {
+          const text = await response.text();
+          errorData = text
+            ? JSON.parse(text)
+            : { message: "Something went wrong" };
+        } catch (e) {
+          errorData = { message: "Something went wrong" };
+        }
+
+        console.log("Error response data:", errorData);
+        const error = new Error(errorData.message || "Something went wrong");
+        error.response = { status: response.status, data: errorData };
         throw error;
       }
 
-      return data;
+      // Kiểm tra xem response có content không trước khi parse JSON
+      const contentType = response.headers.get("content-type");
+      const contentLength = response.headers.get("content-length");
+
+      // Nếu không có content hoặc status 204 (No Content), trả về object success
+      if (contentLength === "0" || response.status === 204) {
+        console.log("Empty response, returning success object");
+        return { success: true, message: "Thao tác thành công" };
+      }
+
+      // Lấy text trước để kiểm tra
+      const responseText = await response.text();
+
+      // Nếu response rỗng, trả về success
+      if (!responseText || responseText.trim() === "") {
+        console.log("Empty response text, returning success object");
+        return { success: true, message: "Thao tác thành công" };
+      }
+
+      // Nếu có content và là JSON, parse JSON
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          const data = JSON.parse(responseText);
+          console.log("Response data:", data);
+          return data;
+        } catch (e) {
+          console.log("JSON parse error, returning text response");
+          return { success: true, message: responseText };
+        }
+      }
+
+      // Nếu không phải JSON, trả về text trong object
+      console.log("Non-JSON response:", responseText);
+      return { success: true, message: responseText };
     } catch (error) {
-      console.error("Request error:", error);
+      console.log("Request error:", error);
       throw error;
     }
   }
@@ -129,7 +172,7 @@ class AuthService {
     const token = await this.getToken();
 
     if (!token) {
-      throw new Error("No authentication token found");
+      throw new Error("Bạn chưa đăng nhập");
     }
 
     // Always set Content-Type to application/json
