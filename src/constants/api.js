@@ -25,10 +25,18 @@ export const ENDPOINTS = {
   COURSES: {
     LIST: "/courses",
     DETAIL: (id) => `/courses/${id}`,
+    ENROLLMENTS: (id) => `/courses/${id}/enrollments`,
     CONTENT: (id) => `/courses/${id}/content`,
-    ENROLLMENTS: (courseId) => `/courses/${courseId}/enrollments`,
-    REVIEWS: (courseId) => `/courses/${courseId}/reviews`,
-    MY_COURSES: "/enrollments/my-courses",
+    MY_COURSES: "/enrollments/my-courses", // Cập nhật endpoint đúng
+    FAVORITES: "/courses/favorites",
+    ADD_FAVORITE: (id) => `/courses/${id}/favorite`,
+    REMOVE_FAVORITE: (id) => `/courses/${id}/favorite`,
+    REVIEWS: (id) => `/courses/${id}/reviews`,
+    MY_REVIEW: (id) => `/courses/${id}/my-review`,
+    UPDATE_REVIEW: (courseId, reviewId) =>
+      `/courses/${courseId}/reviews/${reviewId}`,
+    DELETE_REVIEW: (courseId, reviewId) =>
+      `/courses/${courseId}/reviews/${reviewId}`,
   },
 
   // Surveys
