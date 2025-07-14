@@ -8,24 +8,27 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
+import courseService from "../../services/api/courseService";
 
-// Ảnh
-import PreventionImg from "../../../assets/images/Prevention.jpg";
-import Image2 from "../../../assets/images/Image2.jpg";
-import Image3 from "../../../assets/images/Image3.jpg";
+// Ảnh hero slide
 import SupportImg from "../../../assets/images/supporthug.jpg";
 import OutdoorsImg from "../../../assets/images/outdoors.jpg";
 import GroupSessionImg from "../../../assets/images/groupsession.jpg";
+
+// BASE_URL dùng để nối ảnh nếu là relative path
+import { BASE_URL } from "../../constants/api";
 
 const screenWidth = Dimensions.get("window").width;
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
+
   const [stats, setStats] = useState({
     users: 0,
     courses: 0,
@@ -33,13 +36,24 @@ const HomeScreen = () => {
     success: 0,
   });
 
+  const [courses, setCourses] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Debug: Log user and role in HomePage
-  console.log("[HomePage] user:", user);
-  console.log("[HomePage] user.role:", user?.role);
+  // 🟡 Lấy danh sách khóa học
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await courseService.getCourses({ limit: 5 });
+        setCourses(res.data || []);
+      } catch (error) {
+        console.error("Lỗi khi tải khóa học:", error);
+      }
+    };
 
-  // Counter animation
+    fetchCourses();
+  }, []);
+
+  // Animation số liệu thống kê
   useEffect(() => {
     const targets = {
       users: 5000,
@@ -70,26 +84,21 @@ const HomeScreen = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const courses = [
+  const heroSlides = [
     {
-      id: "1",
-      title: "The Truth About Drugs",
-      image: PreventionImg,
+      title: "Hỗ trợ cộng đồng",
+      desc: "Tham gia cộng đồng hỗ trợ trong hành trình phục hồi",
+      image: GroupSessionImg,
     },
     {
-      id: "2",
-      title: "The Truth About Prescription Drug Abuse",
-      image: Image2,
+      title: "Chữa lành toàn diện",
+      desc: "Khám phá các chương trình phục hồi và sức khỏe ngoài trời",
+      image: OutdoorsImg,
     },
     {
-      id: "3",
-      title: "Recovery Pathways - Online Course",
+      title: "Hướng dẫn chuyên môn",
+      desc: "Truy cập tư vấn chuyên nghiệp và chăm sóc cá nhân",
       image: SupportImg,
-    },
-    {
-      id: "4",
-      title: "Youth Drug Prevention Toolkit",
-      image: Image3,
     },
   ];
 
@@ -110,34 +119,15 @@ const HomeScreen = () => {
     },
   ];
 
-  const heroSlides = [
-    {
-      title: "Hỗ trợ cộng đồng",
-      desc: "Tham gia cộng đồng hỗ trợ trong hành trình phục hồi",
-      image: GroupSessionImg,
-    },
-    {
-      title: "Chữa lành toàn diện",
-      desc: "Khám phá các chương trình phục hồi và sức khỏe ngoài trời",
-      image: OutdoorsImg,
-    },
-    {
-      title: "Hướng dẫn chuyên môn",
-      desc: "Truy cập tư vấn chuyên nghiệp và chăm sóc cá nhân",
-      image: SupportImg,
-    },
-  ];
-
   const handleCoursePress = (course) => {
-    // Navigate to Courses tab first, then to specific course detail
     navigation.navigate("Courses", {
       screen: "CourseList",
-      params: { highlightCourse: course.id },
+      params: { highlightCourse: course._id },
     });
   };
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <Header />
       <ScrollView style={styles.container}>
         {/* Hero Section */}
@@ -173,7 +163,7 @@ const HomeScreen = () => {
           </ScrollView>
         </View>
 
-        {/* Stats */}
+        {/* Stats Section */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>📊 Số liệu ấn tượng</Text>
           <View style={styles.statsRow}>
@@ -204,19 +194,27 @@ const HomeScreen = () => {
           </View>
         </View>
 
-        {/* Courses */}
+        {/* Featured Courses */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🔥 Khóa học nổi bật</Text>
           <FlatList
             horizontal
             data={courses}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
                 onPress={() => handleCoursePress(item)}
               >
-                <Image source={item.image} style={styles.cardImage} />
+                <Image
+                  source={{
+                    uri: item.image.startsWith("http")
+                      ? item.image
+                      : `${BASE_URL}${item.image}`,
+                  }}
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
                 <Text style={styles.cardTitle}>{item.title}</Text>
               </TouchableOpacity>
             )}
@@ -224,7 +222,7 @@ const HomeScreen = () => {
           />
         </View>
 
-        {/* Testimonials */}
+        {/* Testimonials
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💬 Cộng đồng nói gì</Text>
           {testimonials.map((item, idx) => (
@@ -235,7 +233,7 @@ const HomeScreen = () => {
               <Text style={styles.testimonialRole}>{item.role}</Text>
             </View>
           ))}
-        </View>
+        </View> */}
 
         {/* CTA */}
         <View style={styles.ctaSection}>
@@ -250,13 +248,17 @@ const HomeScreen = () => {
           </View>
           <TouchableOpacity
             style={styles.ctaButton}
-            onPress={() => navigation.navigate("Booking")}
+            onPress={() => {
+              navigation.navigate("Appointments", {
+                screen: "ConsultantList",
+              });
+            }}
           >
             <Text style={styles.ctaButtonText}>Đặt lịch tư vấn miễn phí</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </>
+    </SafeAreaView>
   );
 };
 
