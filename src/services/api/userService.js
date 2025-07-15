@@ -48,6 +48,12 @@ class UserService {
     return this.getUserById(currentUser._id);
   }
 
+  async getCurrentUserInProfile() {
+    return authService.authenticatedRequest(ENDPOINTS.USERS.ME, {
+      method: HTTP_METHODS.GET,
+    });
+  }
+
   // Update user profile (if endpoint exists)
   async updateUserProfile(userId, userData) {
     return authService.authenticatedRequest(ENDPOINTS.USERS.DETAIL(userId), {
@@ -65,6 +71,13 @@ class UserService {
 
     return this.updateUserProfile(currentUser._id, userData);
   }
+
+  async updateCurrentUserInProfile(userData) {
+  return authService.authenticatedRequest(ENDPOINTS.USERS.UPDATE_ME, {
+    method: HTTP_METHODS.PATCH,
+    body: JSON.stringify(userData),
+  });
+}
 
   // Get all users (Admin only)
   async getAllUsers(params = {}) {

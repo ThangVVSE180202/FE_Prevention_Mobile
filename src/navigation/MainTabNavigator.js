@@ -7,8 +7,9 @@ import AppointmentStackNavigator from "./stacks/AppointmentStackNavigator";
 import CourseStackNavigator from "./stacks/CourseStackNavigator";
 import SearchStackNavigator from "./stacks/SearchStackNavigator";
 import FavoriteStackNavigator from "./stacks/FavoriteStackNavigator";
+import ProfileStackNavigator from "./stacks/ProfileStackNavigator"
 import { useAuth } from "../context/AuthContext";
-
+// import { ProfileScreen } from "../screens/profile";
 const Tab = createBottomTabNavigator();
 
 const MainTabNavigator = () => {
@@ -101,6 +102,13 @@ const MainTabNavigator = () => {
         component={AppointmentStackNavigator}
         options={{
           title: "Lịch hẹn",
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStackNavigator}
+        options={{
+          title: "Hồ sơ",
         }}
       />
       {/* <Tab.Screen name="Surveys" component={SurveysScreen} />
