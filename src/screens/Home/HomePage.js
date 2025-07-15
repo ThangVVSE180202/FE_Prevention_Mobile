@@ -15,18 +15,10 @@ import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
 import courseService from "../../services/api/courseService";
 
-// Ảnh hero slide
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
-// Ảnh
-import PreventionImg from "../../../assets/images/Prevention.jpg";
-import Image2 from "../../../assets/images/Image2.jpg";
-import Image3 from "../../../assets/images/Image3.jpg";
 import SupportImg from "../../../assets/images/supporthug.jpg";
 import OutdoorsImg from "../../../assets/images/outdoors.jpg";
 import GroupSessionImg from "../../../assets/images/groupsession.jpg";
-
-// BASE_URL dùng để nối ảnh nếu là relative path
-import { BASE_URL } from "../../constants/api";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -44,28 +36,9 @@ const HomeScreen = () => {
   const [courses, setCourses] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // 🟡 Lấy danh sách khóa học
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await courseService.getCourses({ limit: 5 });
-        setCourses(res.data || []);
-      } catch (error) {
-        console.error("Lỗi khi tải khóa học:", error);
-      }
-    };
-
-    fetchCourses();
-  }, []);
-
   // Animation số liệu thống kê
-  // Debug: Log user and role in HomePage
-  console.log("[HomePage] user:", user);
-  console.log("[HomePage] user.role:", user?.role);
   const { token } = useAuth();
    const [loading, setLoading] = useState(true);
-   const [courses, setCourses] = useState([]);
-   console.log("coursesssssssssssssssssssssssss:", courses);
   // Counter animation
   useEffect(() => {
     const targets = {
@@ -256,7 +229,6 @@ useEffect(() => {
             horizontal
             data={courses}
             keyExtractor={(item) => item._id.toString()}
-            keyExtractor={(item) => item._id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
@@ -264,16 +236,6 @@ useEffect(() => {
               >
                 <Image source={{ uri: item.image }} style={styles.cardImage} />
                 <Text style={styles.cardTitle}>{item.name}</Text>
-                <Image
-                  source={{
-                    uri: item.image.startsWith("http")
-                      ? item.image
-                      : `${BASE_URL}${item.image}`,
-                  }}
-                  style={styles.cardImage}
-                  resizeMode="cover"
-                />
-                <Text style={styles.cardTitle}>{item.title}</Text>
               </TouchableOpacity>
             )}
             showsHorizontalScrollIndicator={false}
@@ -371,7 +333,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
 
   // Course card
-    card: {
+   card: {
   marginRight: 15,
   width: 220,
   backgroundColor: "#fff",
@@ -381,13 +343,12 @@ const styles = StyleSheet.create({
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.1,
   shadowRadius: 6,
-  elevation: 4,
+  elevation: 1,
   transform: [{ scale: 1 }],
-  borderWidth: 1,
+  borderWidth: 2,
   borderColor: "#e0e0e0",
-},
-
-  cardImage: {
+  },
+cardImage: {
     width: "100%",
     height: 130,
     resizeMode: "cover",
