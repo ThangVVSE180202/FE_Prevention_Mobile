@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { courseService } from "../../services/api";
-import progressService from "../../services/progressService";
 import { favoriteStorage } from "../../utils";
 import { useAuth } from "../../context/AuthContext";
 
@@ -32,6 +31,47 @@ const CourseDetailScreen = ({ route, navigation }) => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [userReview, setUserReview] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [justDeletedReview, setJustDeletedReview] = useState(false);
+
+  useEffect(() => {
+    console.log("🔄 [STATE] userReview changed:", userReview);
+    console.log("🔄 [STATE] justDeletedReview:", justDeletedReview);
+  }, [userReview, justDeletedReview]);
+
+  const isUserOwnedReview = (review) => {
+    if (!user || !review) {
+      console.log("[isUserOwnedReview] No user or review:", { user, review });
+      return false;
+    }
+
+    const currentUserId = user.id || user._id;
+
+    let reviewUserId;
+    if (typeof review.user === "string") {
+      reviewUserId = review.user;
+    } else if (review.user && typeof review.user === "object") {
+      reviewUserId = review.user._id || review.user.id;
+    } else {
+      reviewUserId = review.userId;
+    }
+
+    console.log("[isUserOwnedReview] Checking ownership:", {
+      currentUserId,
+      reviewUserId,
+      reviewUserType: typeof review.user,
+      reviewUserObject: review.user,
+    });
+
+    if (!currentUserId || !reviewUserId) {
+      console.log("[isUserOwnedReview] Missing required IDs");
+      return false;
+    }
+
+    const result = String(currentUserId) === String(reviewUserId);
+    console.log("[isUserOwnedReview] ID comparison result:", result);
+
+    return result;
+  };
 
   useEffect(() => {
     fetchCourseDetail();
@@ -42,35 +82,87 @@ const CourseDetailScreen = ({ route, navigation }) => {
   }, [courseId]);
 
   useEffect(() => {
+    if (!user) {
+      setUserReview(null);
+      setIsEnrolled(false);
+      setCourseProgress(null);
+      setIsCompleted(false);
+      setIsFavorite(false);
+      setJustDeletedReview(false);
+      console.log(
+        "[CourseDetail] User logged out, resetting user-related states"
+      );
+    } else {
+      console.log(
+        "[CourseDetail] User logged in, refreshing user-related data"
+      );
+      checkEnrollmentStatus();
+      loadCourseProgress();
+      loadFavoriteStatus();
+      fetchCourseReviews();
+    }
+  }, [user]);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
-      console.log("[CourseDetail] Screen focused, refreshing data...");
+      console.log("🔄 [FOCUS] Screen focused, refreshing data...");
 
       loadCourseProgress();
 
-      fetchCourseReviews();
+      fetchCourseReviews().then(() => {
+        console.log(
+          "🔄 [FOCUS] Reviews fetched, checking if need to fetch user review"
+        );
+        console.log("🔄 [FOCUS] Current userReview:", userReview);
+
+        if (user && isEnrolled && !userReview && !justDeletedReview) {
+          console.log(
+            "🔄 [FOCUS] Fetching user review because userReview is null"
+          );
+          fetchUserReview();
+        } else {
+          console.log(
+            "🔄 [FOCUS] Skip fetching user review - already have userReview or missing conditions or just deleted review"
+          );
+        }
+      });
 
       fetchEnrollmentCount();
     });
 
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, user, isEnrolled, userReview, justDeletedReview]);
 
   const loadCourseProgress = async () => {
+    if (!user || !isEnrolled) {
+      setCourseProgress(null);
+      setIsCompleted(false);
+      return;
+    }
+
     try {
-      const progress = await progressService.loadProgress(courseId);
-      setCourseProgress(progress);
-
-      const completed = await progressService.isCourseCompleted(courseId);
-      setIsCompleted(completed);
-
       console.log(
-        "[CourseDetail] Loaded progress:",
-        progress,
-        "Completed:",
-        completed
+        "[CourseDetail] Loading section progress for enrolled user..."
       );
+      const progressResponse = await courseService.getSectionProgress(courseId);
+      const sectionProgress = progressResponse.data;
+
+      setCourseProgress(sectionProgress);
+      setIsCompleted(sectionProgress.isCompleted || false);
+
+      console.log("[CourseDetail] Loaded section progress:", sectionProgress);
     } catch (error) {
-      console.log("Error loading course progress:", error);
+      console.log("[CourseDetail] Error loading course progress:", error);
+      const totalSections =
+        course?.sections?.length || courseChapters.length || 0;
+      setCourseProgress({
+        progress: 0,
+        completedSections: [],
+        currentSection: 0,
+        totalSections: totalSections,
+        isCompleted: false,
+      });
+      setIsCompleted(false);
     }
   };
 
@@ -85,15 +177,18 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
       setEnrollmentCount(courseData?.enrollmentCount || 0);
 
-      if (courseData?.content && typeof courseData.content === "string") {
-        const parsedChapters = courseService.parseCourseContent(
-          courseData.content
+      if (courseData?.sections && Array.isArray(courseData.sections)) {
+        setCourseChapters(courseData.sections);
+        console.log(
+          "[CourseDetail] Loaded sections:",
+          courseData.sections.length
         );
-        setCourseChapters(parsedChapters);
-        console.log("[CourseDetail] Parsed chapters:", parsedChapters.length);
+      } else {
+        setCourseChapters([]);
+        console.log("[CourseDetail] No sections found in course data");
       }
     } catch (error) {
-      console.error("Error fetching course detail:", error);
+      console.log("Error fetching course detail:", error);
       Alert.alert("Lỗi", "Không thể tải thông tin khóa học");
       navigation.goBack();
     } finally {
@@ -200,7 +295,11 @@ const CourseDetailScreen = ({ route, navigation }) => {
   };
 
   const handleWriteReview = () => {
-    navigation.navigate("CourseReview", { courseId, courseName: course.name });
+    console.log("[handleWriteReview] Navigating to CourseReview screen");
+    navigation.navigate("CourseReview", {
+      courseId,
+      courseName: course.name,
+    });
   };
 
   const handleEditReview = (review) => {
@@ -209,14 +308,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
     console.log("[CourseDetail] Review user:", review.user);
     console.log("[CourseDetail] Review ID:", review._id || review.id);
 
-    const isUserReview =
-      user &&
-      (review.user?.id === user.id ||
-        review.user?._id === user.id ||
-        review.userId === user.id ||
-        review.user?.email === user.email);
-
-    if (!isUserReview) {
+    if (!isUserOwnedReview(review)) {
       Alert.alert("Lỗi", "Bạn chỉ có thể sửa đánh giá của chính mình");
       return;
     }
@@ -237,6 +329,11 @@ const CourseDetailScreen = ({ route, navigation }) => {
   };
 
   const handleDeleteReview = (review) => {
+    if (!isUserOwnedReview(review)) {
+      Alert.alert("Lỗi", "Bạn chỉ có thể xóa đánh giá của chính mình");
+      return;
+    }
+
     Alert.alert(
       "Xóa đánh giá",
       "Bạn có chắc chắn muốn xóa đánh giá này không?",
@@ -253,46 +350,189 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
   const performDeleteReview = async (review) => {
     try {
+      if (!isUserOwnedReview(review)) {
+        Alert.alert("Lỗi", "Không có quyền xóa đánh giá này");
+        return;
+      }
+
       const reviewId = review._id || review.id;
-      console.log("[CourseDetail] Deleting review:", reviewId);
+      if (!reviewId) {
+        Alert.alert("Lỗi", "Không tìm thấy ID của đánh giá");
+        return;
+      }
+
+      console.log("[performDeleteReview] Deleting review:", reviewId);
 
       await courseService.deleteCourseReview(courseId, reviewId);
 
+      console.log(
+        "[performDeleteReview] Review deleted successfully, refreshing state"
+      );
+
+      console.log("🗑️ [DELETE] Setting justDeletedReview = true");
+      setJustDeletedReview(true);
+
+      console.log("🗑️ [DELETE] Setting userReview = null");
       setUserReview(null);
 
-      fetchCourseReviews();
+      await fetchCourseReviews();
+
+      setTimeout(() => {
+        console.log("🗑️ [DELETE] Resetting justDeletedReview = false");
+        setJustDeletedReview(false);
+      }, 1000);
 
       Alert.alert("Thành công", "Đã xóa đánh giá thành công!");
     } catch (error) {
-      console.error("Error deleting review:", error);
+      console.log("[performDeleteReview] Error deleting review:", error);
       Alert.alert("Lỗi", error.message || "Không thể xóa đánh giá");
     }
   };
 
   const fetchUserReview = async () => {
     if (!user || !isEnrolled) {
+      console.log(
+        "[fetchUserReview] No user or not enrolled, setting userReview to null"
+      );
       setUserReview(null);
       return;
     }
 
+    console.log(
+      "[fetchUserReview] Starting fetch process for user:",
+      user?.id || user?._id
+    );
+
+    if (reviews && reviews.length > 0) {
+      console.log("[fetchUserReview] Checking reviews list first...");
+      console.log(
+        "[fetchUserReview] Reviews list:",
+        reviews.map((r) => ({
+          id: r._id,
+          user: r.user,
+          userType: typeof r.user,
+          rating: r.rating,
+          review: r.review?.substring(0, 50) + "...",
+        }))
+      );
+
+      const existingUserReview = reviews.find((review) =>
+        isUserOwnedReview(review)
+      );
+
+      if (existingUserReview) {
+        console.log(
+          "[fetchUserReview] ✅ Found user review in reviews list:",
+          existingUserReview
+        );
+        console.log(
+          "🔄 [SET_STATE] Setting userReview to:",
+          existingUserReview
+        );
+        setUserReview(existingUserReview);
+        return;
+      } else {
+        console.log("[fetchUserReview] No user review found in reviews list");
+      }
+    } else {
+      console.log("[fetchUserReview] No reviews list or empty list");
+    }
+
     try {
-      console.log("[CourseDetail] Fetching user review using API");
+      console.log("[fetchUserReview] Fetching user review using API");
       const response = await courseService.getUserReview(courseId);
-      console.log("[CourseDetail] User review response:", response);
+      console.log("[fetchUserReview] User review API response:", response);
 
       const userReviewData =
         response.data?.data || response.data?.review || response.data || null;
-      console.log("[CourseDetail] User review data:", userReviewData);
-      setUserReview(userReviewData);
+
+      if (userReviewData) {
+        console.log(
+          "[fetchUserReview] Found user review from API:",
+          userReviewData
+        );
+
+        if (isUserOwnedReview(userReviewData)) {
+          console.log(
+            "[fetchUserReview] ✅ Valid user review from API, setting state"
+          );
+          setUserReview(userReviewData);
+          return;
+        } else {
+          console.log(
+            "[fetchUserReview] ❌ API review không thuộc về user hiện tại"
+          );
+        }
+      } else {
+        console.log("[fetchUserReview] No review data from API");
+      }
     } catch (error) {
-      console.log("User has not reviewed this course yet:", error);
-      setUserReview(null);
+      console.log(
+        "[fetchUserReview] API error (expected for 403):",
+        error.message
+      );
     }
+
+    console.log("[fetchUserReview] ❌ No user review found, setting to null");
+    console.log("🔄 [SET_STATE] Setting userReview to: null");
+    setUserReview(null);
   };
 
   useEffect(() => {
-    fetchUserReview();
-  }, [user, isEnrolled]);
+    console.log(
+      "[useEffect] Reviews loaded, checking if need to fetch user review:",
+      {
+        user: user?.id,
+        isEnrolled,
+        reviewsLength: reviews?.length,
+        userReview: userReview?.id,
+        justDeletedReview,
+      }
+    );
+
+    if (
+      reviews !== null &&
+      reviews !== undefined &&
+      user &&
+      isEnrolled &&
+      !userReview &&
+      !justDeletedReview
+    ) {
+      console.log(
+        "[useEffect] Fetching user review because userReview is null"
+      );
+
+      const existingUserReview = reviews.find((review) =>
+        isUserOwnedReview(review)
+      );
+      if (existingUserReview) {
+        console.log("[useEffect] Found user review in list, setting directly");
+        setUserReview(existingUserReview);
+      } else {
+        console.log(
+          "[useEffect] No user review in list, calling fetchUserReview"
+        );
+        fetchUserReview();
+      }
+    } else {
+      console.log(
+        "[useEffect] Skip fetching user review - already have userReview or missing conditions or just deleted review"
+      );
+    }
+  }, [reviews, user, isEnrolled, userReview, justDeletedReview]);
+
+  useEffect(() => {
+    console.log("[useEffect] User or enrollment changed:", {
+      user: user?.id,
+      isEnrolled,
+      justDeletedReview,
+    });
+    if (user && isEnrolled && !justDeletedReview) {
+      fetchUserReview();
+    } else {
+      setUserReview(null);
+    }
+  }, [user, isEnrolled, justDeletedReview]);
 
   const calculateAverageRating = () => {
     if (!reviews || reviews.length === 0) return 0;
@@ -309,7 +549,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
       const isFav = await favoriteStorage.isFavorite(courseId);
       setIsFavorite(isFav);
     } catch (error) {
-      console.error("Error loading favorite status:", error);
+      console.log("Error loading favorite status:", error);
     }
   };
 
@@ -325,7 +565,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
         Alert.alert("Thành công", "Đã thêm khóa học vào danh sách yêu thích");
       }
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.log("Error toggling favorite:", error);
       Alert.alert("Lỗi", "Không thể cập nhật danh sách yêu thích");
     }
   };
@@ -457,6 +697,11 @@ const CourseDetailScreen = ({ route, navigation }) => {
             <Text style={styles.startLearningText}>Bắt đầu học</Text>
           </TouchableOpacity>
 
+          {console.log("🔍 [RENDER] userReview state:", userReview)}
+          {console.log("🔍 [RENDER] Show write review button:", !userReview)}
+          {console.log("🔍 [RENDER] User enrolled:", isEnrolled)}
+          {console.log("🔍 [RENDER] Current user:", user?.id || user?._id)}
+
           {!userReview && (
             <TouchableOpacity
               style={styles.reviewButton}
@@ -500,100 +745,121 @@ const CourseDetailScreen = ({ route, navigation }) => {
     );
   };
 
-  const renderReviews = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>⭐ Đánh giá từ học viên</Text>
+  const renderReviews = () => {
+    console.log("[renderReviews] All reviews:", reviews);
+    console.log("[renderReviews] Current user:", user);
+    console.log("[renderReviews] Current user ID:", user?.id || user?._id);
 
-      {reviews.length === 0 ? (
-        <View style={styles.noReviews}>
-          <Ionicons name="chatbubble-outline" size={48} color="#E5E7EB" />
-          <Text style={styles.noReviewsText}>Chưa có đánh giá nào</Text>
-          <Text style={styles.noReviewsSubtext}>
-            Hãy là người đầu tiên đánh giá khóa học này
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.reviewsList}>
-          {reviews.slice(0, 3).map((review, index) => {
-            const isUserReview =
-              user &&
-              (review.user?.id === user.id ||
-                review.user?._id === user.id ||
-                review.userId === user.id);
+    if (reviews && reviews.length > 0) {
+      console.log(
+        "[renderReviews] Review user objects:",
+        reviews.map((r) => ({
+          reviewId: r._id,
+          userId: r.user?._id,
+          userName: r.user?.name,
+        }))
+      );
 
-            return (
-              <View key={index} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewerAvatar}>
-                    <Text style={styles.reviewerInitial}>
-                      {review.user?.name?.charAt(0) || "U"}
-                    </Text>
-                  </View>
-                  <View style={styles.reviewerInfo}>
-                    <Text style={styles.reviewerName}>
-                      {review.user?.name || "Học viên"}
-                      {isUserReview && (
-                        <Text style={styles.youLabel}> (Bạn)</Text>
-                      )}
-                    </Text>
-                    <View style={styles.ratingContainer}>
-                      {[...Array(5)].map((_, i) => (
-                        <Ionicons
-                          key={i}
-                          name={i < review.rating ? "star" : "star-outline"}
-                          size={14}
-                          color="#F59E0B"
-                        />
-                      ))}
+      const userReviewInList = reviews.find((review) =>
+        isUserOwnedReview(review)
+      );
+      console.log("[renderReviews] User review in list:", userReviewInList);
+    }
+
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>⭐ Đánh giá từ học viên</Text>
+
+        {reviews.length === 0 ? (
+          <View style={styles.noReviews}>
+            <Ionicons name="chatbubble-outline" size={48} color="#E5E7EB" />
+            <Text style={styles.noReviewsText}>Chưa có đánh giá nào</Text>
+            <Text style={styles.noReviewsSubtext}>
+              Hãy là người đầu tiên đánh giá khóa học này
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.reviewsList}>
+            {reviews.slice(0, 3).map((review, index) => {
+              const isUserReview = isUserOwnedReview(review);
+              console.log(
+                `[renderReviews] Review ${index} - Is user review:`,
+                isUserReview
+              );
+
+              return (
+                <View key={index} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewerAvatar}>
+                      <Text style={styles.reviewerInitial}>
+                        {review.user?.name?.charAt(0) || "U"}
+                      </Text>
+                    </View>
+                    <View style={styles.reviewerInfo}>
+                      <Text style={styles.reviewerName}>
+                        {review.user?.name || "Học viên"}
+                        {isUserReview && (
+                          <Text style={styles.youLabel}> (Bạn)</Text>
+                        )}
+                      </Text>
+                      <View style={styles.ratingContainer}>
+                        {[...Array(5)].map((_, i) => (
+                          <Ionicons
+                            key={i}
+                            name={i < review.rating ? "star" : "star-outline"}
+                            size={14}
+                            color="#F59E0B"
+                          />
+                        ))}
+                      </View>
                     </View>
                   </View>
+                  <Text style={styles.reviewText}>
+                    {review.review || review.comment}
+                  </Text>
+
+                  {isUserReview && (
+                    <View style={styles.reviewActions}>
+                      <TouchableOpacity
+                        style={styles.editReviewAction}
+                        onPress={() => handleEditReview(review)}
+                      >
+                        <Text style={styles.editReviewActionText}>Sửa</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.deleteReviewAction}
+                        onPress={() => handleDeleteReview(review)}
+                      >
+                        <Text style={styles.deleteReviewActionText}>Xóa</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-                <Text style={styles.reviewText}>
-                  {review.review || review.comment}
+              );
+            })}
+
+            {reviews.length > 3 && (
+              <TouchableOpacity style={styles.viewAllReviews}>
+                <Text style={styles.viewAllReviewsText}>
+                  Xem tất cả {reviews.length} đánh giá
                 </Text>
-
-                {isUserReview && (
-                  <View style={styles.reviewActions}>
-                    <TouchableOpacity
-                      style={styles.editReviewAction}
-                      onPress={() => handleEditReview(review)}
-                    >
-                      <Text style={styles.editReviewActionText}>Sửa</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.deleteReviewAction}
-                      onPress={() => handleDeleteReview(review)}
-                    >
-                      <Text style={styles.deleteReviewActionText}>Xóa</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-
-          {reviews.length > 3 && (
-            <TouchableOpacity style={styles.viewAllReviews}>
-              <Text style={styles.viewAllReviewsText}>
-                Xem tất cả {reviews.length} đánh giá
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-    </View>
-  );
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const renderProgressSection = () => {
-    if (!courseProgress || courseChapters.length === 0) return null;
+    if (!courseProgress || courseChapters.length === 0 || !isEnrolled)
+      return null;
 
-    const readChaptersCount = courseProgress.readChapters.size;
-    const totalChapters = courseChapters.length;
-    const progressPercentage =
-      totalChapters > 0
-        ? Math.round((readChaptersCount / totalChapters) * 100)
-        : 0;
+    const completedSectionsCount =
+      courseProgress.completedSections?.length || 0;
+    const totalSections = courseChapters.length;
+    const progressPercentage = courseProgress.progress || 0;
 
     return (
       <View style={styles.section}>
@@ -602,7 +868,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
         <View style={styles.progressContainer}>
           <View style={styles.progressInfo}>
             <Text style={styles.progressText}>
-              {readChaptersCount}/{totalChapters} chương đã đọc
+              {completedSectionsCount}/{totalSections} chương đã hoàn thành
             </Text>
             <Text style={styles.progressPercentage}>{progressPercentage}%</Text>
           </View>
@@ -633,12 +899,13 @@ const CourseDetailScreen = ({ route, navigation }) => {
 
         <View style={styles.chaptersContainer}>
           {courseChapters.map((chapter, index) => {
-            const isRead = courseProgress?.readChapters.has(index) || false;
+            const isCompleted =
+              courseProgress?.completedSections?.includes(index) || false;
             const isCurrent =
-              isEnrolled && courseProgress?.currentChapter === index;
+              isEnrolled && courseProgress?.currentSection === index;
             const isReadOrCompleted =
-              isRead ||
-              (isCompleted && index <= courseProgress?.currentChapter);
+              isCompleted ||
+              (isCompleted && index <= (courseProgress?.currentSection || 0));
 
             return (
               <View
@@ -646,17 +913,17 @@ const CourseDetailScreen = ({ route, navigation }) => {
                 style={[
                   styles.chapterItem,
                   isCurrent && !isCompleted && styles.currentChapterItem,
-                  isReadOrCompleted && styles.readChapterItem,
+                  isCompleted && styles.readChapterItem,
                 ]}
               >
                 <View
                   style={[
                     styles.chapterIcon,
-                    isReadOrCompleted && styles.readChapterIconBg,
+                    isCompleted && styles.readChapterIconBg,
                     isCurrent && !isCompleted && styles.currentChapterIconBg,
                   ]}
                 >
-                  {isReadOrCompleted ? (
+                  {isCompleted ? (
                     <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                   ) : (
                     <Text
@@ -675,7 +942,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
                     style={[
                       styles.chapterTitle,
                       isCurrent && !isCompleted && styles.currentChapterTitle,
-                      isReadOrCompleted && styles.readChapterTitle,
+                      isCompleted && styles.readChapterTitle,
                     ]}
                     numberOfLines={2}
                   >
@@ -685,7 +952,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
                   <View style={styles.chapterMeta}>
                     <Ionicons name="book-outline" size={14} color="#6B7280" />
                     <Text style={styles.chapterType}>Bài đọc</Text>
-                    {isReadOrCompleted && (
+                    {isCompleted && (
                       <>
                         <Ionicons
                           name="ellipse"
@@ -693,10 +960,10 @@ const CourseDetailScreen = ({ route, navigation }) => {
                           color="#10B981"
                           style={{ marginHorizontal: 8 }}
                         />
-                        <Text style={styles.readStatus}>Đã đọc</Text>
+                        <Text style={styles.readStatus}>Đã hoàn thành</Text>
                       </>
                     )}
-                    {isCurrent && !isReadOrCompleted && (
+                    {isCurrent && !isCompleted && (
                       <>
                         <Ionicons
                           name="ellipse"
@@ -704,7 +971,7 @@ const CourseDetailScreen = ({ route, navigation }) => {
                           color="#3B82F6"
                           style={{ marginHorizontal: 8 }}
                         />
-                        <Text style={styles.currentStatus}>Đang đọc</Text>
+                        <Text style={styles.currentStatus}>Đang học</Text>
                       </>
                     )}
                     {!isEnrolled && index === 0 && (

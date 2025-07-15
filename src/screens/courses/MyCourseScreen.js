@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { courseService } from "../../services/api";
-import progressService from "../../services/progressService";
 import { useAuth } from "../../context/AuthContext";
 
 const MyCourseScreen = ({ navigation }) => {
@@ -60,7 +59,7 @@ const MyCourseScreen = ({ navigation }) => {
 
       await loadAllCourseProgress(courses);
     } catch (err) {
-      console.error("Error fetching my courses:", err);
+      console.log("Error fetching my courses:", err);
       setError(err.message);
       if (err.message.includes("401") || err.message.includes("unauthorized")) {
         Alert.alert(
@@ -84,43 +83,39 @@ const MyCourseScreen = ({ navigation }) => {
         const course = courseItem.course || courseItem;
         const courseId = course._id;
 
-        let totalChapters = 0;
         try {
-          if (course.content && typeof course.content === "string") {
-            const parsedChapters = courseService.parseCourseContent(
-              course.content
-            );
-            totalChapters = parsedChapters.length;
-          }
+          const progressResponse =
+            await courseService.getSectionProgress(courseId);
+          const sectionProgress = progressResponse.data;
+
+          progressData[courseId] = {
+            progress: sectionProgress.progress || 0,
+            isCompleted: sectionProgress.isCompleted || false,
+            completedSections: sectionProgress.completedSections || [],
+            currentSection: sectionProgress.currentSection || 0,
+            totalSections: sectionProgress.totalSections || 0,
+            sectionsProgress: sectionProgress.sectionsProgress || [],
+          };
         } catch (error) {
           console.log(
-            `[MyCourses] Could not parse content for course ${courseId}:`,
+            `[MyCourses] No progress found for course ${courseId}:`,
             error
           );
+          progressData[courseId] = {
+            progress: 0,
+            isCompleted: false,
+            completedSections: [],
+            currentSection: 0,
+            totalSections: course.sections?.length || 0,
+            sectionsProgress: [],
+          };
         }
-
-        const progress = await progressService.loadProgress(courseId);
-        const isCompleted = await progressService.isCourseCompleted(courseId);
-        const completionPercentage =
-          totalChapters > 0
-            ? await progressService.getCourseCompletionPercentage(
-                courseId,
-                totalChapters
-              )
-            : 0;
-
-        progressData[courseId] = {
-          ...progress,
-          isCompleted,
-          completionPercentage,
-          totalChapters,
-        };
       }
 
       setCourseProgress(progressData);
       console.log("[MyCourses] Loaded progress for all courses:", progressData);
     } catch (error) {
-      console.error("Error loading course progress:", error);
+      console.log("Error loading course progress:", error);
     }
   };
 
@@ -174,10 +169,10 @@ const MyCourseScreen = ({ navigation }) => {
     }
 
     return {
-      progress: progressData.completionPercentage || 0,
+      progress: progressData.progress || 0,
       isCompleted: progressData.isCompleted || false,
-      totalChapters: progressData.totalChapters || 0,
-      readChapters: progressData.readChapters?.size || 0,
+      totalSections: progressData.totalSections || 0,
+      completedSections: progressData.completedSections?.length || 0,
     };
   };
 

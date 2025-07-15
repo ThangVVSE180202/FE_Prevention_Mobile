@@ -14,20 +14,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { courseService } from "../../services/api";
-import progressService from "../../services/progressService";
 import { useAuth } from "../../context/AuthContext";
 
 const CourseContentScreen = ({ route, navigation }) => {
   const { courseId, courseName } = route.params;
   const { user } = useAuth();
   const [courseContent, setCourseContent] = useState(null);
+  const [courseSections, setCourseSections] = useState([]);
+  const [sectionProgress, setSectionProgress] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentChapter, setCurrentChapter] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-  const [readChapters, setReadChapters] = useState(new Set());
-  const [isScrolledToEnd, setIsScrolledToEnd] = useState(false);
-  const [isCourseCompleted, setIsCourseCompleted] = useState(false);
   const [showChapterMenu, setShowChapterMenu] = useState(false);
 
   const scrollViewRef = useRef(null);
@@ -42,47 +39,86 @@ const CourseContentScreen = ({ route, navigation }) => {
       setError(null);
       console.log("[CourseContent] Fetching course data for:", courseId);
 
-      const response = await courseService.getCourseById(courseId);
-      console.log("[CourseContent] Course response:", response);
+      const courseResponse = await courseService.getCourseById(courseId);
+      console.log("[CourseContent] Course response:", courseResponse);
 
       const courseData =
-        response.data?.data || response.data?.course || response.data;
-      console.log("[CourseContent] Extracted course data:", courseData);
+        courseResponse.data?.data ||
+        courseResponse.data?.course ||
+        courseResponse.data;
 
-      const content = courseData?.content;
-      console.log(
-        "[CourseContent] Content field:",
-        content ? "Found" : "Not found",
-        content?.length
-      );
+      setCourseContent(courseData);
 
-      if (!content || content.trim() === "") {
-        throw new Error("Khóa học này chưa có nội dung");
+      if (
+        courseData?.sections &&
+        Array.isArray(courseData.sections) &&
+        courseData.sections.length > 0
+      ) {
+        setCourseSections(courseData.sections);
+        console.log(
+          "[CourseContent] Using new sections format:",
+          courseData.sections.length
+        );
+      } else if (
+        courseData?.content &&
+        typeof courseData.content === "string"
+      ) {
+        console.log(
+          "[CourseContent] Converting old content format to sections"
+        );
+        const parsedSections = courseService.parseCourseContent(
+          courseData.content
+        );
+        setCourseSections(parsedSections);
+        console.log("[CourseContent] Parsed sections:", parsedSections.length);
+      } else {
+        console.warn("[CourseContent] No content or sections found");
+        setCourseSections([]);
       }
 
-      if (typeof content === "string") {
-        const parsedContent = courseService.parseCourseContent(content);
-        setCourseContent(parsedContent);
-        console.log("[CourseContent] Parsed chapters:", parsedContent.length);
-        console.log(
-          "[CourseContent] Chapter titles:",
-          parsedContent.map((ch) => ch.title)
-        );
+      if (
+        courseSections.length > 0 ||
+        (courseData?.sections && courseData.sections.length > 0)
+      ) {
+        try {
+          const progressResponse =
+            await courseService.getSectionProgress(courseId);
+          const progressData = progressResponse.data;
 
-        const savedProgress = await progressService.loadProgress(courseId);
-        setProgress(savedProgress.currentChapter);
-        setCurrentChapter(savedProgress.currentChapter);
-        setReadChapters(savedProgress.readChapters);
+          setSectionProgress(progressData);
+          setCurrentChapter(progressData.currentSection || 0);
 
-        const isCompleted = await progressService.isCourseCompleted(courseId);
-        setIsCourseCompleted(isCompleted);
-
-        console.log("[CourseContent] Loaded progress:", savedProgress);
+          console.log("[CourseContent] Section progress:", progressData);
+        } catch (progressError) {
+          console.log(
+            "[CourseContent] No progress found, starting fresh:",
+            progressError
+          );
+          const totalSections =
+            courseData?.sections?.length ||
+            (courseData?.content
+              ? courseService.parseCourseContent(courseData.content).length
+              : 0);
+          setSectionProgress({
+            progress: 0,
+            completedSections: [],
+            currentSection: 0,
+            totalSections: totalSections,
+            isCompleted: false,
+          });
+          setCurrentChapter(0);
+        }
       } else {
-        setCourseContent(content);
+        setSectionProgress({
+          progress: 0,
+          completedSections: [],
+          currentSection: 0,
+          totalSections: 0,
+          isCompleted: false,
+        });
       }
     } catch (error) {
-      console.error("Error fetching course content:", error);
+      console.log("Error fetching course content:", error);
       setError(error.message);
       Alert.alert("Lỗi", error.message || "Không thể tải nội dung khóa học");
     } finally {
@@ -90,146 +126,68 @@ const CourseContentScreen = ({ route, navigation }) => {
     }
   };
 
-  const updateProgress = (chapterIndex) => {
-    const newProgress = Math.max(progress, chapterIndex);
-    setProgress(newProgress);
+  const markSectionAsCompleted = async (sectionIndex) => {
+    try {
+      console.log(
+        `[CourseContent] Marking section ${sectionIndex} as completed`
+      );
 
-    const totalChapters = courseContent?.length || 0;
-    if (chapterIndex === totalChapters - 1) {
-      setProgress(totalChapters - 1);
+      const response = await courseService.completeSection(
+        courseId,
+        sectionIndex
+      );
+      console.log("[CourseContent] Section completion response:", response);
 
-      setTimeout(() => {
-        Alert.alert(
-          "🎉 Chúc mừng!",
-          "Bạn đã hoàn thành khóa học! Cảm ơn bạn đã học tập cùng chúng tôi.",
-          [
-            { text: "Tiếp tục đọc", style: "cancel" },
-            {
-              text: "Viết đánh giá",
-              onPress: () =>
-                navigation.navigate("CourseReview", { courseId, courseName }),
-            },
-          ]
-        );
-      }, 1000);
+      const updatedProgress = response.data.enrollment;
+      setSectionProgress(updatedProgress);
+
+      Alert.alert(
+        "Thành công",
+        response.message || `Hoàn thành chương ${sectionIndex + 1}`
+      );
+
+      if (updatedProgress.isCompleted) {
+        setTimeout(() => {
+          Alert.alert(
+            "🎉 Chúc mừng!",
+            "Bạn đã hoàn thành khóa học! Cảm ơn bạn đã học tập cùng chúng tôi.",
+            [
+              { text: "Tiếp tục đọc", style: "cancel" },
+              {
+                text: "Viết đánh giá",
+                onPress: () =>
+                  navigation.navigate("CourseReview", { courseId, courseName }),
+              },
+            ]
+          );
+        }, 1000);
+      }
+    } catch (error) {
+      console.log("Error completing section:", error);
+      Alert.alert("Lỗi", "Không thể hoàn thành chương. Vui lòng thử lại.");
     }
   };
 
-  const markChapterAsRead = async (chapterIndex) => {
-    const newReadChapters = new Set([...readChapters, chapterIndex]);
-    setReadChapters(newReadChapters);
-
-    const newProgress = Math.max(progress, chapterIndex);
-    setProgress(newProgress);
-
-    await progressService.saveProgress(courseId, newProgress, newReadChapters);
-
-    console.log(`[CourseContent] Chapter ${chapterIndex + 1} marked as read`);
-
-    const totalChapters = courseContent?.length || 0;
-    if (chapterIndex === totalChapters - 1 && !isCourseCompleted) {
-      await progressService.markCourseCompleted(courseId, courseName);
-      setIsCourseCompleted(true);
-
-      setTimeout(() => {
-        Alert.alert(
-          "🎉 Chúc mừng!",
-          "Bạn đã hoàn thành khóa học! Cảm ơn bạn đã học tập cùng chúng tôi.",
-          [
-            { text: "Tiếp tục đọc", style: "cancel" },
-            {
-              text: "Viết đánh giá",
-              onPress: () =>
-                navigation.navigate("CourseReview", { courseId, courseName }),
-            },
-          ]
-        );
-      }, 1000);
-    }
-  };
-
-  const handleChapterPress = async (index) => {
+  const handleSectionPress = async (index) => {
     setCurrentChapter(index);
-    setIsScrolledToEnd(false);
-
-    const newProgress = Math.max(progress, index);
-    setProgress(newProgress);
-    await progressService.saveProgress(courseId, newProgress, readChapters);
+    setShowChapterMenu(false);
 
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: true });
     }
   };
 
-  const handleNextChapter = () => {
-    if (currentChapter < (courseContent?.length - 1 || 0)) {
-      const nextChapter = currentChapter + 1;
-      setCurrentChapter(nextChapter);
-      updateProgress(nextChapter);
+  const handleNextSection = () => {
+    if (currentChapter < courseSections.length - 1) {
+      const nextSection = currentChapter + 1;
+      setCurrentChapter(nextSection);
     }
   };
 
-  const handlePreviousChapter = () => {
+  const handlePreviousSection = () => {
     if (currentChapter > 0) {
       setCurrentChapter(currentChapter - 1);
     }
-  };
-
-  const handleCompleteCourse = () => {
-    Alert.alert(
-      "Hoàn thành khóa học",
-      "Chúc mừng! Bạn đã hoàn thành khóa học. Bạn có muốn viết đánh giá không?",
-      [
-        { text: "Để sau", onPress: () => navigation.goBack() },
-        {
-          text: "Viết đánh giá",
-          onPress: () =>
-            navigation.navigate("CourseReview", { courseId, courseName }),
-        },
-      ]
-    );
-  };
-
-  const handleScroll = (event) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const isCloseToBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-
-    if (isCloseToBottom && !isScrolledToEnd) {
-      setIsScrolledToEnd(true);
-      markChapterAsRead(currentChapter);
-    }
-  };
-
-  const handleMarkAsCompleted = () => {
-    Alert.alert(
-      "Đánh dấu hoàn thành",
-      "Bạn có chắc muốn đánh dấu khóa học này là hoàn thành?",
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Hoàn thành",
-          onPress: () => {
-            setIsCourseCompleted(true);
-            Alert.alert(
-              "🎉 Chúc mừng!",
-              "Bạn đã hoàn thành khóa học! Cảm ơn bạn đã học tập cùng chúng tôi.",
-              [
-                { text: "Đóng", style: "cancel" },
-                {
-                  text: "Viết đánh giá",
-                  onPress: () =>
-                    navigation.navigate("CourseReview", {
-                      courseId,
-                      courseName,
-                    }),
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
   };
 
   const renderHeader = () => (
@@ -246,7 +204,7 @@ const CourseContentScreen = ({ route, navigation }) => {
           {courseName || "Nội dung khóa học"}
         </Text>
         <Text style={styles.headerSubtitle}>
-          Chương {currentChapter + 1}/{courseContent?.length || 0}
+          Chương {currentChapter + 1}/{courseSections.length || 0}
         </Text>
       </View>
 
@@ -260,15 +218,16 @@ const CourseContentScreen = ({ route, navigation }) => {
   );
 
   const renderProgressBar = () => {
-    const readChaptersCount = readChapters.size;
-    const totalChapters = courseContent?.length || 0;
+    const completedCount = sectionProgress?.completedSections?.length || 0;
+    const totalSections = courseSections.length || 0;
+    const progressPercent = sectionProgress?.progress || 0;
 
     return (
       <View style={styles.progressContainer}>
         <View style={styles.progressInfo}>
-          <Text style={styles.progressText}>Tiến độ đọc</Text>
+          <Text style={styles.progressText}>Tiến độ học tập</Text>
           <Text style={styles.progressStatus}>
-            {readChaptersCount}/{totalChapters} chương đã đọc
+            {completedCount}/{totalSections} chương - {progressPercent}%
           </Text>
         </View>
         <View style={styles.progressBar}>
@@ -276,10 +235,7 @@ const CourseContentScreen = ({ route, navigation }) => {
             style={[
               styles.progressFill,
               {
-                width:
-                  totalChapters > 0
-                    ? `${(readChaptersCount / totalChapters) * 100}%`
-                    : "0%",
+                width: `${progressPercent}%`,
               },
             ]}
           />
@@ -288,68 +244,12 @@ const CourseContentScreen = ({ route, navigation }) => {
     );
   };
 
-  const renderChapterNavigation = () => (
-    <View style={styles.chapterNavigation}>
-      <Text style={styles.navigationTitle}>Danh sách chương</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chapterList}
-      >
-        {Array.isArray(courseContent) &&
-          courseContent.map((chapter, index) => {
-            const isRead = readChapters.has(index);
-            const isCurrent = index === currentChapter;
-
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.chapterTab,
-                  isCurrent && styles.activeChapterTab,
-                  isRead && styles.readChapterTab,
-                ]}
-                onPress={() => handleChapterPress(index)}
-              >
-                <View
-                  style={[
-                    styles.chapterIcon,
-                    isRead && styles.readChapterIcon,
-                    isCurrent && styles.currentChapterIcon,
-                  ]}
-                >
-                  {isRead ? (
-                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.chapterNumber,
-                        isCurrent && styles.currentChapterNumber,
-                      ]}
-                    >
-                      {index + 1}
-                    </Text>
-                  )}
-                </View>
-                <Text
-                  style={[
-                    styles.chapterTabText,
-                    isCurrent && styles.activeChapterTabText,
-                    isRead && styles.readChapterTabText,
-                  ]}
-                  numberOfLines={2}
-                >
-                  {chapter.title || `Chương ${index + 1}`}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-      </ScrollView>
-    </View>
-  );
+  const renderChapterNavigation = () => {
+    return null;
+  };
 
   const renderChapterContent = () => {
-    if (!courseContent || !courseContent[currentChapter]) {
+    if (!courseSections || courseSections.length === 0) {
       return (
         <View style={styles.noContentContainer}>
           <Ionicons name="document-text-outline" size={64} color="#E5E7EB" />
@@ -360,38 +260,51 @@ const CourseContentScreen = ({ route, navigation }) => {
       );
     }
 
-    const chapter = courseContent[currentChapter];
+    const currentSection = courseSections[currentChapter];
+    const isCompleted =
+      sectionProgress?.completedSections?.includes(currentChapter) || false;
 
     return (
       <View style={styles.contentContainer}>
         <ScrollView
           style={styles.chapterContentScroll}
           showsVerticalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
           contentContainerStyle={styles.scrollContent}
           ref={scrollViewRef}
         >
           <View style={styles.chapterContent}>
             <Text style={styles.compactChapterTitle}>
-              {chapter.title || `Chương ${currentChapter + 1}`}
+              {currentSection.title || `Chương ${currentChapter + 1}`}
             </Text>
 
-            {chapter.type === "video" ? (
-              <View style={styles.videoPlaceholder}>
-                <Ionicons name="play-circle" size={64} color="#3B82F6" />
-                <Text style={styles.videoText}>
-                  Video sẽ được hiển thị ở đây
-                </Text>
-                <Text style={styles.videoSubtext}>
-                  Tính năng video đang được phát triển
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.textContent}>
-                {chapter.content || "Nội dung chương đang được cập nhật..."}
-              </Text>
-            )}
+            <Text style={styles.textContent}>
+              {currentSection.content ||
+                "Nội dung chương đang được cập nhật..."}
+            </Text>
+
+            <View style={styles.chapterFooter}>
+              {isCompleted ? (
+                <TouchableOpacity
+                  style={styles.completedChapterButton}
+                  disabled={true}
+                >
+                  <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                  <Text style={styles.completedChapterText}>Đã hoàn thành</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.completeChapterButton}
+                  onPress={() => markSectionAsCompleted(currentChapter)}
+                >
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={16}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.completeChapterText}>Hoàn thành</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -413,7 +326,7 @@ const CourseContentScreen = ({ route, navigation }) => {
               onPress={() => setShowChapterMenu(false)}
               style={styles.closeButton}
             >
-              <Ionicons name="close" size={24} color="#6B7280" />
+              <Ionicons name="close" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
@@ -421,94 +334,91 @@ const CourseContentScreen = ({ route, navigation }) => {
             style={styles.chapterMenuList}
             showsVerticalScrollIndicator={false}
           >
-            {Array.isArray(courseContent) &&
-              courseContent.map((chapter, index) => {
-                const isRead = readChapters.has(index);
-                const isCurrent = index === currentChapter;
+            {courseSections.map((section, index) => {
+              const isCompleted =
+                sectionProgress?.completedSections?.includes(index) || false;
+              const isCurrent = index === currentChapter;
 
-                return (
-                  <TouchableOpacity
-                    key={index}
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.chapterMenuItem,
+                    isCurrent && styles.activeChapterMenuItem,
+                    isCompleted && styles.readChapterMenuItem,
+                  ]}
+                  onPress={() => handleSectionPress(index)}
+                >
+                  <View
                     style={[
-                      styles.chapterMenuItem,
-                      isCurrent && styles.activeChapterMenuItem,
-                      isRead && styles.readChapterMenuItem,
+                      styles.chapterMenuIcon,
+                      isCompleted && styles.readChapterMenuIcon,
+                      isCurrent && styles.currentChapterMenuIcon,
                     ]}
-                    onPress={() => {
-                      handleChapterPress(index);
-                      setShowChapterMenu(false);
-                    }}
                   >
-                    <View
-                      style={[
-                        styles.chapterMenuIcon,
-                        isRead && styles.readChapterMenuIcon,
-                        isCurrent && styles.currentChapterMenuIcon,
-                      ]}
-                    >
-                      {isRead ? (
-                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                      ) : (
-                        <Text
-                          style={[
-                            styles.chapterMenuNumber,
-                            isCurrent && styles.currentChapterMenuNumber,
-                          ]}
-                        >
-                          {index + 1}
-                        </Text>
-                      )}
-                    </View>
-
-                    <View style={styles.chapterMenuContent}>
+                    {isCompleted ? (
+                      <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                    ) : (
                       <Text
                         style={[
-                          styles.chapterMenuTitle,
-                          isCurrent && styles.activeChapterMenuTitle,
-                          isRead && styles.readChapterMenuTitle,
+                          styles.chapterMenuNumber,
+                          isCurrent && styles.currentChapterMenuNumber,
                         ]}
-                        numberOfLines={2}
                       >
-                        {chapter.title || `Chương ${index + 1}`}
+                        {index + 1}
                       </Text>
-                      <View style={styles.chapterMenuMeta}>
-                        <Ionicons
-                          name="book-outline"
-                          size={14}
-                          color={isCurrent ? "#3B82F6" : "#6B7280"}
-                        />
-                        <Text
-                          style={[
-                            styles.chapterMenuType,
-                            isCurrent && styles.activeChapterMenuType,
-                          ]}
-                        >
-                          Bài đọc
-                        </Text>
-                        {isRead && (
-                          <>
-                            <Ionicons
-                              name="ellipse"
-                              size={4}
-                              color="#10B981"
-                              style={{ marginHorizontal: 8 }}
-                            />
-                            <Text style={styles.readStatus}>Đã đọc</Text>
-                          </>
-                        )}
-                      </View>
-                    </View>
-
-                    {isCurrent && (
-                      <Ionicons
-                        name="chevron-forward"
-                        size={20}
-                        color="#3B82F6"
-                      />
                     )}
-                  </TouchableOpacity>
-                );
-              })}
+                  </View>
+
+                  <View style={styles.chapterMenuContent}>
+                    <Text
+                      style={[
+                        styles.chapterMenuTitle,
+                        isCurrent && styles.activeChapterMenuTitle,
+                        isCompleted && styles.readChapterMenuTitle,
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {section.title || `Chương ${index + 1}`}
+                    </Text>
+                    <View style={styles.chapterMenuMeta}>
+                      <Ionicons
+                        name="book-outline"
+                        size={14}
+                        color={isCurrent ? "#3B82F6" : "#6B7280"}
+                      />
+                      <Text
+                        style={[
+                          styles.chapterMenuType,
+                          isCurrent && styles.activeChapterMenuType,
+                        ]}
+                      >
+                        Bài đọc
+                      </Text>
+                      {isCompleted && (
+                        <>
+                          <Ionicons
+                            name="ellipse"
+                            size={4}
+                            color="#10B981"
+                            style={{ marginHorizontal: 8 }}
+                          />
+                          <Text style={styles.readStatus}>Đã hoàn thành</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+
+                  {isCurrent && (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#3B82F6"
+                    />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
       </View>
@@ -771,7 +681,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40, // Thêm padding bottom để nội dung không bị che
+    paddingBottom: 40,
   },
   chapterContent: {
     padding: 20,
@@ -993,6 +903,153 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#10B981",
     fontWeight: "600",
+  },
+  sectionContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#F3F4F6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#3B82F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  sectionNumberCompleted: {
+    backgroundColor: "#10B981",
+  },
+  sectionNumberText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1F2937",
+  },
+  completedBadge: {
+    backgroundColor: "#D1FAE5",
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  completedBadgeText: {
+    fontSize: 12,
+    color: "#059669",
+    fontWeight: "500",
+  },
+  sectionContent: {
+    padding: 16,
+  },
+  sectionText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 22,
+  },
+  sectionFooter: {
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  completeButton: {
+    backgroundColor: "#3B82F6",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+  },
+  completedButton: {
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    opacity: 0.6,
+  },
+  completeText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  completedText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "#E5E7EB",
+    marginVertical: 8,
+  },
+  bottomPadding: {
+    height: 16,
+  },
+  chapterFooter: {
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  completeChapterButton: {
+    backgroundColor: "#3B82F6",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  completedChapterButton: {
+    backgroundColor: "#10B981",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    opacity: 0.6,
+  },
+  completeChapterText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+  completedChapterText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    fontWeight: "500",
+    marginLeft: 4,
   },
 });
 

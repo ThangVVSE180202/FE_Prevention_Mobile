@@ -9,11 +9,14 @@ import {
   FlatList,
   Dimensions,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
 import courseService from "../../services/api/courseService";
+import authService from "../../services/api/authService";
 
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 import SupportImg from "../../../assets/images/supporthug.jpg";
@@ -153,10 +156,10 @@ const HomeScreen = () => {
 useEffect(() => {
     fetchCourses();
   }, []);
-
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <Header />
+      <Header onLogout={handleLogout} />
       <ScrollView style={styles.container}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
