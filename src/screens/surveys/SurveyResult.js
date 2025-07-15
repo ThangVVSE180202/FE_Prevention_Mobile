@@ -40,9 +40,9 @@ const SurveyResult = () => {
         </View>
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => navigation.navigate("SurveyList")}
+          onPress={() => navigation.navigate("Main", { screen: "Home" })}
         >
-          <Text style={{ color: "#fff" }}>Quay lại danh sách khảo sát</Text>
+          <Text style={{ color: "#fff" }}>Quay về trang chủ</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

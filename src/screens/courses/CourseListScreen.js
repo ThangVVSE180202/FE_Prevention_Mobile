@@ -1,6 +1,3 @@
-// 📚 Course List Screen
-// Display list of all available courses with search and filter functionality
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -33,7 +30,6 @@ const CourseListScreen = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const [favorites, setFavorites] = useState([]);
 
-  // Filter options
   const filterOptions = [
     { value: "", label: "Tất cả" },
     { value: "student", label: "Học sinh" },
@@ -95,7 +91,6 @@ const CourseListScreen = ({ navigation }) => {
       const publishedCourses = allCourses.filter(
         (course) => course.isPublished === true
       );
-      console.log("[CourseListScreen] Published courses:", publishedCourses);
 
       if (reset) {
         setCourses(publishedCourses);
@@ -108,7 +103,7 @@ const CourseListScreen = ({ navigation }) => {
         setPage(currentPage + 1);
       }
     } catch (err) {
-      console.error("Error fetching courses:", err);
+      console.log("Error fetching courses:", err);
       setError(err.message);
       Alert.alert("Lỗi", "Không thể tải danh sách khóa học");
     } finally {
@@ -122,7 +117,7 @@ const CourseListScreen = ({ navigation }) => {
       const favoriteCourses = await favoriteStorage.getFavorites();
       setFavorites(favoriteCourses);
     } catch (error) {
-      console.error("Error loading favorites:", error);
+      console.log("Error loading favorites:", error);
     }
   };
 
@@ -140,7 +135,7 @@ const CourseListScreen = ({ navigation }) => {
         Alert.alert("Thành công", "Đã thêm khóa học vào danh sách yêu thích");
       }
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.log("Error toggling favorite:", error);
       Alert.alert("Lỗi", "Không thể cập nhật danh sách yêu thích");
     }
   };

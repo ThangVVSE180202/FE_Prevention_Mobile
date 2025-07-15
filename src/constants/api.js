@@ -21,22 +21,36 @@ export const ENDPOINTS = {
     RESET_PASSWORD: "/auth/resetPassword",
   },
 
-  // Courses
   COURSES: {
     LIST: "/courses",
     DETAIL: (id) => `/courses/${id}`,
     ENROLLMENTS: (id) => `/courses/${id}/enrollments`,
     CONTENT: (id) => `/courses/${id}/content`,
-    MY_COURSES: "/enrollments/my-courses", // Cập nhật endpoint đúng
+    MY_COURSES: "/enrollments/my-courses",
+    COMPLETED_COURSES: "/enrollments/completed-courses",
+
+    ENROLL: "/enrollments",
+
+    COMPLETE_SECTION: (courseId) =>
+      `/enrollments/courses/${courseId}/sections/complete`,
+    SECTION_PROGRESS: (courseId) =>
+      `/enrollments/courses/${courseId}/sections/progress`,
+    CERTIFICATE: (courseId) => `/enrollments/courses/${courseId}/certificate`,
+
     FAVORITES: "/courses/favorites",
     ADD_FAVORITE: (id) => `/courses/${id}/favorite`,
     REMOVE_FAVORITE: (id) => `/courses/${id}/favorite`,
+    TOGGLE_FAVORITE: (id) => `/courses/${id}/favorite`,
+    IS_FAVORITE: (id) => `/courses/${id}/is-favorite`,
     REVIEWS: (id) => `/courses/${id}/reviews`,
     MY_REVIEW: (id) => `/courses/${id}/my-review`,
     UPDATE_REVIEW: (courseId, reviewId) =>
       `/courses/${courseId}/reviews/${reviewId}`,
     DELETE_REVIEW: (courseId, reviewId) =>
       `/courses/${courseId}/reviews/${reviewId}`,
+
+    TOPICS: "/courses/topics",
+    SEARCH_BY_TOPICS: "/courses/search/topics",
   },
 
   // Surveys

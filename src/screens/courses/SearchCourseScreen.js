@@ -30,6 +30,11 @@ const SearchCourseScreen = ({ navigation }) => {
   const [hasMore, setHasMore] = useState(true);
   const [favorites, setFavorites] = useState([]);
 
+  const [topics, setTopics] = useState([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [isTopicSearch, setIsTopicSearch] = useState(false);
+
   const filterOptions = [
     { value: "", label: "Tất cả" },
     { value: "student", label: "Học sinh" },
@@ -57,6 +62,9 @@ const SearchCourseScreen = ({ navigation }) => {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchText.length >= 2) {
+        if (isTopicSearch) {
+          clearTopicSearch();
+        }
         fetchCourses(true);
       } else if (searchText.length === 0) {
         setCourses([]);
@@ -69,7 +77,16 @@ const SearchCourseScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadFavorites();
+    fetchTopics();
   }, []);
+
+  const normalizeSearchText = (text) => {
+    return text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  };
 
   const fetchCourses = async (reset = false) => {
     if (searchText.length < 2) {
@@ -86,36 +103,115 @@ const SearchCourseScreen = ({ navigation }) => {
       setError(null);
       const currentPage = reset ? 1 : page;
 
+      const normalizedSearch = normalizeSearchText(searchText);
+
       const params = {
         page: currentPage,
         limit: 10,
-        isPublished: true,
-        search: searchText,
+        search: normalizedSearch,
         ...(selectedFilter && { targetAudience: selectedFilter }),
       };
 
-      console.log("[SearchCourseScreen] Fetching courses with params:", params);
-      const response = await courseService.getCourses(params);
-
-      const allCourses = response.data?.data || [];
-      const publishedCourses = allCourses.filter(
-        (course) => course.isPublished === true
+      console.log("[SearchCourseScreen] =========================");
+      console.log(
+        "[SearchCourseScreen] Original search text:",
+        `"${searchText}"`
       );
+      console.log(
+        "[SearchCourseScreen] Normalized search text:",
+        `"${normalizedSearch}"`
+      );
+      console.log("[SearchCourseScreen] Fetching courses with params:", params);
 
-      if (reset) {
-        setCourses(publishedCourses);
+      const response = await courseService.getCourses(params);
+      console.log("[SearchCourseScreen] Raw API response:", response);
+      console.log("[SearchCourseScreen] Response structure:", {
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        dataKeys: response.data ? Object.keys(response.data) : null,
+        dataIsArray: Array.isArray(response.data),
+        nestedData: response.data?.data
+          ? {
+              type: typeof response.data.data,
+              isArray: Array.isArray(response.data.data),
+              length: Array.isArray(response.data.data)
+                ? response.data.data.length
+                : "not array",
+            }
+          : "no nested data",
+      });
+
+      let allCourses = [];
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        allCourses = response.data.data;
+        console.log(
+          "[SearchCourseScreen] Using response.data.data:",
+          allCourses.length
+        );
+      } else if (response.data && Array.isArray(response.data)) {
+        allCourses = response.data;
+        console.log(
+          "[SearchCourseScreen] Using response.data:",
+          allCourses.length
+        );
+      } else if (response.courses && Array.isArray(response.courses)) {
+        allCourses = response.courses;
+        console.log(
+          "[SearchCourseScreen] Using response.courses:",
+          allCourses.length
+        );
       } else {
-        setCourses((prev) => [...prev, ...publishedCourses]);
+        console.warn(
+          "[SearchCourseScreen] No recognizable courses array found in response"
+        );
+        console.log(
+          "[SearchCourseScreen] Full response:",
+          JSON.stringify(response, null, 2)
+        );
+        allCourses = [];
       }
 
-      setHasMore(publishedCourses.length === 10);
+      console.log("[SearchCourseScreen] All courses found:", allCourses.length);
+
+      if (allCourses.length > 0) {
+        console.log("[SearchCourseScreen] First course sample:", {
+          id: allCourses[0]._id || allCourses[0].id,
+          name: allCourses[0].name || allCourses[0].title,
+          description: allCourses[0].description,
+          topics: allCourses[0].topics,
+          keys: Object.keys(allCourses[0]),
+        });
+
+        allCourses.forEach((course, index) => {
+          console.log(`[SearchCourseScreen] Course ${index + 1}:`, {
+            name: course.name,
+            description: course.description,
+            topics: course.topics,
+          });
+        });
+      }
+
+      const coursesToShow = allCourses;
+
+      console.log(
+        "[SearchCourseScreen] Courses to show:",
+        coursesToShow.length
+      );
+      console.log("[SearchCourseScreen] =========================");
+
+      if (reset) {
+        setCourses(coursesToShow);
+      } else {
+        setCourses((prev) => [...prev, ...coursesToShow]);
+      }
+
+      setHasMore(coursesToShow.length === 10);
       if (!reset) {
         setPage(currentPage + 1);
       }
     } catch (err) {
-      console.error("Error fetching courses:", err);
       setError(err.message);
-      Alert.alert("Lỗi", "Không thể tải danh sách khóa học");
+      Alert.alert("Lỗi", "Không thể tải danh sách khóa học: " + err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -127,7 +223,44 @@ const SearchCourseScreen = ({ navigation }) => {
       const favoriteCourses = await favoriteStorage.getFavorites();
       setFavorites(favoriteCourses);
     } catch (error) {
-      console.error("Error loading favorites:", error);
+      console.log("Error loading favorites:", error);
+    }
+  };
+
+  const fetchTopics = async () => {
+    try {
+      setTopicsLoading(true);
+      console.log("[SearchScreen] Fetching topics...");
+      const response = await courseService.getTopics();
+
+      console.log("[SearchScreen] Raw topics response:", response);
+
+      let topicsData = [];
+      if (
+        response.data &&
+        response.data.topics &&
+        Array.isArray(response.data.topics)
+      ) {
+        topicsData = response.data.topics;
+        console.log("[SearchScreen] Using response.data.topics:", topicsData);
+      } else if (response.data && Array.isArray(response.data)) {
+        topicsData = response.data;
+        console.log("[SearchScreen] Using response.data:", topicsData);
+      } else if (response.topics && Array.isArray(response.topics)) {
+        topicsData = response.topics;
+        console.log("[SearchScreen] Using response.topics:", topicsData);
+      } else if (Array.isArray(response)) {
+        topicsData = response;
+        console.log("[SearchScreen] Using response directly:", topicsData);
+      }
+
+      console.log("[SearchScreen] Final topics data:", topicsData);
+      console.log("[SearchScreen] Topics count:", topicsData.length);
+      setTopics(topicsData);
+    } catch (error) {
+      console.log("[SearchScreen] Error fetching topics:", error);
+    } finally {
+      setTopicsLoading(false);
     }
   };
 
@@ -145,21 +278,109 @@ const SearchCourseScreen = ({ navigation }) => {
         Alert.alert("Thành công", "Đã thêm khóa học vào danh sách yêu thích");
       }
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.log("Error toggling favorite:", error);
       Alert.alert("Lỗi", "Không thể cập nhật danh sách yêu thích");
     }
   };
 
   const onRefresh = () => {
-    if (searchText.length >= 2) {
+    if (isTopicSearch && selectedTopic) {
+      setRefreshing(true);
+      searchByTopic(selectedTopic, true);
+    } else if (searchText.length >= 2) {
       setRefreshing(true);
       fetchCourses(true);
     }
   };
 
+  const searchByTopic = async (topic, reset = false) => {
+    if (!topic) {
+      setCourses([]);
+      return;
+    }
+
+    try {
+      if (reset) {
+        setLoading(true);
+        setPage(1);
+      }
+
+      const currentPage = reset ? 1 : page;
+      const params = {
+        page: currentPage,
+        limit: 10,
+        ...(selectedFilter && { targetAudience: selectedFilter }),
+      };
+
+      console.log("[SearchScreen] Searching courses by topic:", topic);
+      const response = await courseService.searchCoursesByTopics(
+        [topic],
+        params
+      );
+
+      let coursesData = [];
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        coursesData = response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        coursesData = response.data;
+      } else if (response.courses && Array.isArray(response.courses)) {
+        coursesData = response.courses;
+      }
+
+      console.log(
+        "[SearchScreen] Courses found for topic:",
+        coursesData.length
+      );
+
+      if (reset) {
+        setCourses(coursesData);
+      } else {
+        setCourses((prev) => [...prev, ...coursesData]);
+      }
+
+      setHasMore(coursesData.length === 10);
+      if (!reset) {
+        setPage(currentPage + 1);
+      }
+    } catch (error) {
+      console.log("[SearchScreen] Error searching courses by topic:", error);
+      Alert.alert("Lỗi", "Không thể tìm kiếm khóa học theo chủ đề");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleTopicPress = (topic) => {
+    const topicName = typeof topic === "string" ? topic : topic.name || topic;
+    console.log("[SearchScreen] Topic pressed:", topicName);
+
+    if (selectedTopic === topicName) {
+      console.log("[SearchScreen] Toggling off topic:", topicName);
+      clearTopicSearch();
+      return;
+    }
+
+    setSearchText("");
+    setSelectedTopic(topicName);
+    setIsTopicSearch(true);
+
+    searchByTopic(topicName, true);
+  };
+
+  const clearTopicSearch = () => {
+    setSelectedTopic(null);
+    setIsTopicSearch(false);
+    setCourses([]);
+  };
+
   const loadMoreCourses = () => {
-    if (!loading && hasMore && searchText.length >= 2) {
-      fetchCourses(false);
+    if (!loading && hasMore) {
+      if (isTopicSearch && selectedTopic) {
+        searchByTopic(selectedTopic, false);
+      } else if (searchText.length >= 2) {
+        fetchCourses(false);
+      }
     }
   };
 
@@ -170,6 +391,9 @@ const SearchCourseScreen = ({ navigation }) => {
   const clearSearch = () => {
     setSearchText("");
     setCourses([]);
+    if (isTopicSearch) {
+      clearTopicSearch();
+    }
   };
 
   const applyFilter = (filter) => {
@@ -324,14 +548,67 @@ const SearchCourseScreen = ({ navigation }) => {
     </Modal>
   );
 
+  const renderTopics = () => {
+    return (
+      <View style={styles.topicsContainer}>
+        <Text style={styles.topicsTitle}>🏷️ Chủ đề phổ biến</Text>
+
+        {topicsLoading ? (
+          <View style={styles.topicsLoadingContainer}>
+            <Text style={styles.topicsLoadingText}>Đang tải chủ đề...</Text>
+          </View>
+        ) : topics.length === 0 ? (
+          <View style={styles.topicsEmptyContainer}>
+            <Text style={styles.topicsEmptyText}>Không có chủ đề nào</Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.topicsScrollView}
+            contentContainerStyle={styles.topicsContent}
+          >
+            {topics.slice(0, 10).map((topic, index) => {
+              const topicName =
+                typeof topic === "string" ? topic : topic.name || topic;
+              const isSelected = selectedTopic === topicName;
+
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.topicTag,
+                    isSelected && styles.selectedTopicTag,
+                  ]}
+                  onPress={() => handleTopicPress(topic)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.topicTagText,
+                      isSelected && styles.selectedTopicTagText,
+                    ]}
+                  >
+                    {topicName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
+
   const renderEmptyState = () => {
-    if (searchText.length === 0) {
+    if (searchText.length === 0 && !isTopicSearch) {
       return (
         <View style={styles.emptyContainer}>
           <Ionicons name="search" size={80} color="#E5E7EB" />
           <Text style={styles.emptyTitle}>Tìm kiếm khóa học</Text>
           <Text style={styles.emptyText}>
-            Nhập từ khóa để tìm kiếm các khóa học phòng ngừa
+            Nhập từ khóa để tìm kiếm các khóa học phòng ngừa hoặc chọn chủ đề
+            bên dưới
           </Text>
         </View>
       );
@@ -412,6 +689,8 @@ const SearchCourseScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       )}
+
+      {renderTopics()}
 
       <FlatList
         data={courses}
@@ -527,7 +806,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   emptyListContainer: {
-    flex: 1,
+    flexGrow: 1,
   },
   courseCard: {
     backgroundColor: "#FFFFFF",
@@ -639,11 +918,11 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
     paddingHorizontal: 32,
-    paddingVertical: 64,
+    paddingVertical: 40,
+    paddingTop: 60,
   },
   emptyTitle: {
     fontSize: 20,
@@ -716,6 +995,66 @@ const styles = StyleSheet.create({
   selectedFilterText: {
     color: "#3B82F6",
     fontWeight: "500",
+  },
+  topicsContainer: {
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  topicsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  topicsScrollView: {
+    paddingHorizontal: 20,
+  },
+  topicsContent: {
+    paddingRight: 20,
+  },
+  topicTag: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  selectedTopicTag: {
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
+  },
+  topicTagText: {
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  selectedTopicTagText: {
+    color: "#FFFFFF",
+  },
+  topicsLoadingContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  topicsLoadingText: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontStyle: "italic",
+  },
+  topicsEmptyContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  topicsEmptyText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontStyle: "italic",
   },
 });
 

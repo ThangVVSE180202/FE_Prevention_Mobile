@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import {
   View,
   Text,
@@ -9,19 +9,19 @@ import {
   FlatList,
   Dimensions,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
 import courseService from "../../services/api/courseService";
+import authService from "../../services/api/authService";
 
-// Ảnh hero slide
+import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 import SupportImg from "../../../assets/images/supporthug.jpg";
 import OutdoorsImg from "../../../assets/images/outdoors.jpg";
 import GroupSessionImg from "../../../assets/images/groupsession.jpg";
-
-// BASE_URL dùng để nối ảnh nếu là relative path
-import { BASE_URL } from "../../constants/api";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -39,21 +39,10 @@ const HomeScreen = () => {
   const [courses, setCourses] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // 🟡 Lấy danh sách khóa học
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await courseService.getCourses({ limit: 5 });
-        setCourses(res.data || []);
-      } catch (error) {
-        console.error("Lỗi khi tải khóa học:", error);
-      }
-    };
-
-    fetchCourses();
-  }, []);
-
   // Animation số liệu thống kê
+  const { token } = useAuth();
+   const [loading, setLoading] = useState(true);
+  // Counter animation
   useEffect(() => {
     const targets = {
       users: 5000,
@@ -101,6 +90,28 @@ const HomeScreen = () => {
       image: SupportImg,
     },
   ];
+  // const courses = [
+  //   {
+  //     id: "1",
+  //     title: "The Truth About Drugs",
+  //     image: PreventionImg,
+  //   },
+  //   {
+  //     id: "2",
+  //     title: "The Truth About Prescription Drug Abuse",
+  //     image: Image2,
+  //   },
+  //   {
+  //     id: "3",
+  //     title: "Recovery Pathways - Online Course",
+  //     image: SupportImg,
+  //   },
+  //   {
+  //     id: "4",
+  //     title: "Youth Drug Prevention Toolkit",
+  //     image: Image3,
+  //   },
+  // ];
 
   const testimonials = [
     {
@@ -126,9 +137,29 @@ const HomeScreen = () => {
     });
   };
 
+  const fetchCourses = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${BASE_URL}${ENDPOINTS.COURSES.LIST}`, {
+        method: HTTP_METHODS.GET,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to fetch courses");
+      const data = await response.json();
+      setCourses(data.data.data || []);
+    } catch (error) {
+      console.log("[HomePage] fetchCourses error:", error);
+    }
+    setLoading(false);
+  };
+
+useEffect(() => {
+    fetchCourses();
+  }, []);
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <Header />
+      <Header onLogout={handleLogout} />
       <ScrollView style={styles.container}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
@@ -200,22 +231,14 @@ const HomeScreen = () => {
           <FlatList
             horizontal
             data={courses}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item._id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
                 onPress={() => handleCoursePress(item)}
               >
-                <Image
-                  source={{
-                    uri: item.image.startsWith("http")
-                      ? item.image
-                      : `${BASE_URL}${item.image}`,
-                  }}
-                  style={styles.cardImage}
-                  resizeMode="cover"
-                />
-                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Image source={{ uri: item.image }} style={styles.cardImage} />
+                <Text style={styles.cardTitle}>{item.name}</Text>
               </TouchableOpacity>
             )}
             showsHorizontalScrollIndicator={false}
@@ -313,9 +336,33 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15 },
 
   // Course card
-  card: { marginRight: 15, width: 220 },
-  cardImage: { width: "100%", height: 120, borderRadius: 10 },
-  cardTitle: { fontSize: 14, marginTop: 10, fontWeight: "500" },
+   card: {
+  marginRight: 15,
+  width: 220,
+  backgroundColor: "#fff",
+  borderRadius: 12,
+  overflow: "hidden",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 6,
+  elevation: 1,
+  transform: [{ scale: 1 }],
+  borderWidth: 2,
+  borderColor: "#e0e0e0",
+  },
+cardImage: {
+    width: "100%",
+    height: 130,
+    resizeMode: "cover",
+  },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    padding: 10,
+    color: "#333",
+  },
+
 
   // Testimonial
   testimonialCard: {

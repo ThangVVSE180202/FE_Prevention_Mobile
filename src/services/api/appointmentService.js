@@ -429,6 +429,13 @@ class AppointmentService {
       nextCancelAvailable: responseData.userStatus?.nextCancelAvailable,
     };
   }
+
+  // Delete a slot (Consultant only)
+  async deleteSlot(slotId) {
+    return authService.authenticatedRequest(`/appointment-slots/${slotId}`, {
+      method: HTTP_METHODS.DELETE,
+    });
+  }
 }
 
 export default new AppointmentService();

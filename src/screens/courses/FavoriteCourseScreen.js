@@ -1,6 +1,3 @@
-// 💖 Favorite Course Screen
-// Display user's favorite courses with management functionality
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -32,7 +29,6 @@ const FavoriteCourseScreen = ({ navigation }) => {
     loadFavoriteCourses();
   }, []);
 
-  // Listen for focus events để refresh khi quay lại từ màn hình khác
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", () => {
       loadFavoriteCourses();
@@ -78,7 +74,7 @@ const FavoriteCourseScreen = ({ navigation }) => {
         setFavoriteIds(validIds);
       }
     } catch (err) {
-      console.error("Error loading favorite courses:", err);
+      console.log("Error loading favorite courses:", err);
       setError(err.message);
       Alert.alert("Lỗi", "Không thể tải danh sách khóa học yêu thích");
     } finally {
@@ -114,7 +110,7 @@ const FavoriteCourseScreen = ({ navigation }) => {
                 "Đã bỏ khóa học khỏi danh sách yêu thích"
               );
             } catch (error) {
-              console.error("Error removing favorite:", error);
+              console.log("Error removing favorite:", error);
               Alert.alert(
                 "Lỗi",
                 "Không thể xóa khóa học khỏi danh sách yêu thích"
@@ -127,12 +123,10 @@ const FavoriteCourseScreen = ({ navigation }) => {
   };
 
   const handleCoursePress = (course) => {
-    // Navigate to CourseDetail within the same Favorite stack
     navigation.navigate("CourseDetail", { courseId: course._id });
   };
 
   const handleBrowseCourses = () => {
-    // Navigate to Courses tab to browse courses
     navigation.getParent()?.navigate("Courses", {
       screen: "CourseList",
     });
@@ -156,7 +150,7 @@ const FavoriteCourseScreen = ({ navigation }) => {
               setFavoriteCourses([]);
               Alert.alert("Thành công", "Đã xóa tất cả khóa học yêu thích");
             } catch (error) {
-              console.error("Error clearing favorites:", error);
+              console.log("Error clearing favorites:", error);
               Alert.alert("Lỗi", "Không thể xóa danh sách yêu thích");
             }
           },
@@ -175,6 +169,28 @@ const FavoriteCourseScreen = ({ navigation }) => {
     );
     return (totalRating / reviews.length).toFixed(1);
   };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerContent}>
+        <Text style={styles.title}>Yêu thích</Text>
+        <Text style={styles.subtitle}>
+          {favoriteCourses.length > 0
+            ? `${favoriteCourses.length} khóa học yêu thích`
+            : "Chưa có khóa học yêu thích"}
+        </Text>
+      </View>
+
+      {favoriteCourses.length > 0 && (
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={handleClearAllFavorites}
+        >
+          <Ionicons name="trash-outline" size={24} color="#EF4444" />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   const renderCourseCard = ({ item }) => (
     <TouchableOpacity
@@ -277,75 +293,15 @@ const FavoriteCourseScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerContent}>
-        <Text style={styles.title}>Yêu thích</Text>
-        <Text style={styles.subtitle}>
-          {favoriteCourses.length > 0
-            ? `${favoriteCourses.length} khóa học yêu thích`
-            : "Chưa có khóa học yêu thích"}
-        </Text>
-      </View>
-
-      {favoriteCourses.length > 0 && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearAllFavorites}
-        >
-          <Ionicons name="trash-outline" size={24} color="#EF4444" />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
-  //   const renderStats = () => {
-  //     if (favoriteCourses.length === 0) return null;
-
-  //     const totalEnrollments = favoriteCourses.reduce(
-  //       (sum, course) => sum + (course.enrollmentCount || 0),
-  //       0
-  //     );
-
-  //     const averageRating =
-  //       favoriteCourses.reduce(
-  //         (sum, course) =>
-  //           sum + parseFloat(calculateAverageRating(course.reviews)),
-  //         0
-  //       ) / favoriteCourses.length;
-
-  //     return (
-  //       <View style={styles.statsContainer}>
-  //         <View style={styles.statBox}>
-  //           <Text style={styles.statNumber}>{favoriteCourses.length}</Text>
-  //           <Text style={styles.statLabel}>Khóa học</Text>
-  //         </View>
-
-  //         <View style={styles.statBox}>
-  //           <Text style={styles.statNumber}>{totalEnrollments}</Text>
-  //           <Text style={styles.statLabel}>Tổng học viên</Text>
-  //         </View>
-
-  //         <View style={styles.statBox}>
-  //           <Text style={styles.statNumber}>{averageRating.toFixed(1)}</Text>
-  //           <Text style={styles.statLabel}>Đánh giá TB</Text>
-  //         </View>
-  //       </View>
-  //     );
-  //   };
-
-  //   if (loading) {
-  //     return (
-  //       <SafeAreaView style={styles.container}>
-  //         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-  //         {renderHeader()}
-  //         <View style={styles.loadingContainer}>
-  //           <ActivityIndicator size="large" color="#3B82F6" />
-  //           <Text style={styles.loadingText}>Đang tải khóa học yêu thích...</Text>
-  //         </View>
-  //       </SafeAreaView>
-  //     );
-  //   }
+  if (!loading && favoriteCourses.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+        {renderHeader()}
+        <View style={styles.emptyStateWrapper}>{renderEmptyState()}</View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -354,25 +310,34 @@ const FavoriteCourseScreen = ({ navigation }) => {
       {renderHeader()}
       {/* {renderStats()} */}
 
-      <FlatList
-        data={favoriteCourses}
-        renderItem={renderCourseCard}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={[
-          styles.listContainer,
-          favoriteCourses.length === 0 && styles.emptyListContainer,
-        ]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#3B82F6"
-            colors={["#3B82F6"]}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.loadingText}>Đang tải khóa học yêu thích...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={favoriteCourses}
+          renderItem={renderCourseCard}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={[
+            styles.listContainer,
+            favoriteCourses.length === 0 && styles.emptyListContainer,
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#3B82F6"
+              colors={["#3B82F6"]}
+            />
+          }
+          ListEmptyComponent={
+            favoriteCourses.length === 0 ? renderEmptyState : null
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -570,11 +535,13 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 32,
+  },
+  emptyStateWrapper: {
+    flex: 1,
     paddingHorizontal: 32,
-    paddingVertical: 64,
+    paddingTop: 40,
   },
   emptyIconContainer: {
     marginBottom: 24,

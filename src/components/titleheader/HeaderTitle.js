@@ -17,9 +17,9 @@ const HeaderTitle = ({ title }) => {
             navigation.goBack();
           }
         }}
-        style={styles.backBtn}
+        // style={styles.backBtn}
       >
-        <Icon name="arrow-back" size={24} color="#1976d2" />
+        <Icon name="arrow-back" size={24} color="#333"/>
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={{ width: 32 }} />
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1976d2",
+    color: "#333",
     textAlign: "center",
   },
 });
