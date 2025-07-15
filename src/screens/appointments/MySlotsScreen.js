@@ -39,7 +39,12 @@ const MySlotsScreen = ({ navigation }) => {
       setLoading(true);
       setError(null);
       const response = await appointmentService.getMySlots();
-      setSlots(response.data?.slots || []);
+      // Filter out slots whose endTime is in the past
+      const now = new Date();
+      const filteredSlots = (response.data?.slots || []).filter(
+        (slot) => new Date(slot.endTime) > now
+      );
+      setSlots(filteredSlots);
     } catch (err) {
       console.error("Error fetching my slots:", err);
       setError(err.message);
@@ -68,7 +73,7 @@ const MySlotsScreen = ({ navigation }) => {
   const handleMarkNoShow = async (slotId) => {
     Alert.alert(
       "Xác nhận đánh dấu không đến",
-      "Bạn có chắc chắn thành viên này không đến hẹn? Hành động này không thể hoàn tác.",
+      "Bạn có chắc chắn thành viên này không đến hẹn? Thành viên sẽ nhận 2 cảnh cáo và có thể bị khóa tài khoản nếu đạt 3 cảnh cáo.",
       [
         { text: "Hủy", style: "cancel" },
         {
@@ -76,8 +81,21 @@ const MySlotsScreen = ({ navigation }) => {
           style: "destructive",
           onPress: async () => {
             try {
-              await appointmentService.markNoShow(slotId);
-              Alert.alert("Thành công", "Đã đánh dấu thành viên không đến hẹn");
+              const response = await appointmentService.markNoShow(slotId);
+
+              // Show detailed response with user status
+              let message = "Đã đánh dấu thành viên không đến hẹn";
+              if (response.data?.userStatus) {
+                const userStatus = response.data.userStatus;
+                message += `\n\nThành viên hiện có ${userStatus.strikes}/3 cảnh cáo`;
+
+                if (userStatus.isBanned) {
+                  message +=
+                    "\n⚠️ Thành viên đã bị khóa tài khoản do quá nhiều cảnh cáo";
+                }
+              }
+
+              Alert.alert("Thành công", message);
               fetchMySlots();
             } catch (error) {
               console.error("Error marking no-show:", error);
@@ -85,9 +103,10 @@ const MySlotsScreen = ({ navigation }) => {
               let errorMessage = "Không thể đánh dấu không đến hẹn";
               if (error.response?.status === 400) {
                 errorMessage =
-                  "Chỉ có thể đánh dấu không đến hẹn sau thời gian hẹn";
+                  "Slot này đã được đánh dấu no-show rồi hoặc chưa đến thời gian hẹn";
               } else if (error.response?.status === 403) {
-                errorMessage = "Bạn không có quyền thực hiện hành động này";
+                errorMessage =
+                  "Bạn chỉ có thể đánh dấu no-show cho slot của mình";
               } else if (error.response?.status === 404) {
                 errorMessage = "Không tìm thấy lịch hẹn này";
               }

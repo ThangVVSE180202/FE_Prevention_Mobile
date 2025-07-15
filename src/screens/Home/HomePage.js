@@ -8,10 +8,14 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  SafeAreaView,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
+import courseService from "../../services/api/courseService";
+
+// Ảnh hero slide
 import { BASE_URL, ENDPOINTS, HTTP_METHODS } from "../../constants/api";
 // Ảnh
 import PreventionImg from "../../../assets/images/Prevention.jpg";
@@ -21,11 +25,15 @@ import SupportImg from "../../../assets/images/supporthug.jpg";
 import OutdoorsImg from "../../../assets/images/outdoors.jpg";
 import GroupSessionImg from "../../../assets/images/groupsession.jpg";
 
+// BASE_URL dùng để nối ảnh nếu là relative path
+import { BASE_URL } from "../../constants/api";
+
 const screenWidth = Dimensions.get("window").width;
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
+
   const [stats, setStats] = useState({
     users: 0,
     courses: 0,
@@ -33,7 +41,24 @@ const HomeScreen = () => {
     success: 0,
   });
 
+  const [courses, setCourses] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // 🟡 Lấy danh sách khóa học
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await courseService.getCourses({ limit: 5 });
+        setCourses(res.data || []);
+      } catch (error) {
+        console.error("Lỗi khi tải khóa học:", error);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  // Animation số liệu thống kê
   // Debug: Log user and role in HomePage
   console.log("[HomePage] user:", user);
   console.log("[HomePage] user.role:", user?.role);
@@ -72,6 +97,23 @@ const HomeScreen = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const heroSlides = [
+    {
+      title: "Hỗ trợ cộng đồng",
+      desc: "Tham gia cộng đồng hỗ trợ trong hành trình phục hồi",
+      image: GroupSessionImg,
+    },
+    {
+      title: "Chữa lành toàn diện",
+      desc: "Khám phá các chương trình phục hồi và sức khỏe ngoài trời",
+      image: OutdoorsImg,
+    },
+    {
+      title: "Hướng dẫn chuyên môn",
+      desc: "Truy cập tư vấn chuyên nghiệp và chăm sóc cá nhân",
+      image: SupportImg,
+    },
+  ];
   // const courses = [
   //   {
   //     id: "1",
@@ -112,26 +154,11 @@ const HomeScreen = () => {
     },
   ];
 
-  const heroSlides = [
-    {
-      title: "Hỗ trợ cộng đồng",
-      desc: "Tham gia cộng đồng hỗ trợ trong hành trình phục hồi",
-      image: GroupSessionImg,
-    },
-    {
-      title: "Chữa lành toàn diện",
-      desc: "Khám phá các chương trình phục hồi và sức khỏe ngoài trời",
-      image: OutdoorsImg,
-    },
-    {
-      title: "Hướng dẫn chuyên môn",
-      desc: "Truy cập tư vấn chuyên nghiệp và chăm sóc cá nhân",
-      image: SupportImg,
-    },
-  ];
-
   const handleCoursePress = (course) => {
-    navigation.navigate("CourseDetail", { id: course.id });
+    navigation.navigate("Courses", {
+      screen: "CourseList",
+      params: { highlightCourse: course._id },
+    });
   };
 
   const fetchCourses = async () => {
@@ -155,7 +182,7 @@ useEffect(() => {
   }, []);
 
   return (
-    <>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
       <Header />
       <ScrollView style={styles.container}>
         {/* Hero Section */}
@@ -191,7 +218,7 @@ useEffect(() => {
           </ScrollView>
         </View>
 
-        {/* Stats */}
+        {/* Stats Section */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>📊 Số liệu ấn tượng</Text>
           <View style={styles.statsRow}>
@@ -222,13 +249,14 @@ useEffect(() => {
           </View>
         </View>
 
-        {/* Courses */}
+        {/* Featured Courses */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🔥 Khóa học nổi bật</Text>
           <FlatList
             horizontal
             data={courses}
             keyExtractor={(item) => item._id.toString()}
+            keyExtractor={(item) => item._id}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
@@ -236,13 +264,23 @@ useEffect(() => {
               >
                 <Image source={{ uri: item.image }} style={styles.cardImage} />
                 <Text style={styles.cardTitle}>{item.name}</Text>
+                <Image
+                  source={{
+                    uri: item.image.startsWith("http")
+                      ? item.image
+                      : `${BASE_URL}${item.image}`,
+                  }}
+                  style={styles.cardImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.cardTitle}>{item.title}</Text>
               </TouchableOpacity>
             )}
             showsHorizontalScrollIndicator={false}
           />
         </View>
 
-        {/* Testimonials */}
+        {/* Testimonials
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>💬 Cộng đồng nói gì</Text>
           {testimonials.map((item, idx) => (
@@ -253,7 +291,7 @@ useEffect(() => {
               <Text style={styles.testimonialRole}>{item.role}</Text>
             </View>
           ))}
-        </View>
+        </View> */}
 
         {/* CTA */}
         <View style={styles.ctaSection}>
@@ -268,13 +306,17 @@ useEffect(() => {
           </View>
           <TouchableOpacity
             style={styles.ctaButton}
-            onPress={() => navigation.navigate("Booking")}
+            onPress={() => {
+              navigation.navigate("Appointments", {
+                screen: "ConsultantList",
+              });
+            }}
           >
             <Text style={styles.ctaButtonText}>Đặt lịch tư vấn miễn phí</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </>
+    </SafeAreaView>
   );
 };
 
