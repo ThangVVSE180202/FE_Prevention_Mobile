@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { courseService } from "../../services/api";
@@ -31,7 +32,29 @@ const CourseReviewScreen = ({ route, navigation }) => {
     existingReview?.review || existingReview?.comment || ""
   );
   const [submitting, setSubmitting] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const commentInputRef = useRef(null);
+  const scrollViewRef = useRef(null);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      "keyboardDidShow",
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      "keyboardDidHide",
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   const isValidInput = useMemo(() => {
     return rating > 0 && comment.trim().length >= 10;
@@ -44,7 +67,25 @@ const CourseReviewScreen = ({ route, navigation }) => {
   const handleCommentSectionPress = () => {
     if (commentInputRef.current) {
       commentInputRef.current.focus();
+      setTimeout(() => {
+        if (scrollViewRef.current && commentInputRef.current) {
+          commentInputRef.current.measureLayout(
+            scrollViewRef.current.getScrollableNode(),
+            (x, y) => {
+              scrollViewRef.current.scrollTo({ y: y - 50, animated: true });
+            }
+          );
+        }
+      }, 300);
     }
+  };
+
+  const handleCommentFocus = () => {
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 400, animated: true });
+      }
+    }, 200);
   };
 
   const handleSubmitReview = async () => {
@@ -108,7 +149,7 @@ const CourseReviewScreen = ({ route, navigation }) => {
         ]
       );
     } catch (error) {
-      console.error("Error submitting review:", error);
+      console.log("Error submitting review:", error);
       Alert.alert(
         "Lỗi",
         error.message || `Không thể ${editMode ? "cập nhật" : "gửi"} đánh giá`
@@ -193,7 +234,10 @@ const CourseReviewScreen = ({ route, navigation }) => {
         textAlignVertical="top"
         placeholderTextColor="#9CA3AF"
         maxLength={500}
-        autoFocus={false}
+        autoFocus={!editMode}
+        onFocus={handleCommentFocus}
+        returnKeyType="done"
+        blurOnSubmit={true}
       />
 
       <Text style={styles.characterCount}>
@@ -248,18 +292,26 @@ const CourseReviewScreen = ({ route, navigation }) => {
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 20}
       >
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
           {renderHeader()}
           {renderRatingSection()}
           {renderCommentSection()}
           {renderSubmitSection()}
 
-          <View style={styles.bottomPadding} />
+          <View
+            style={[
+              styles.bottomPadding,
+              keyboardVisible && styles.keyboardBottomPadding,
+            ]}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -390,6 +442,12 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  keyboardBottomPadding: {
+    height: 300,
   },
 });
 

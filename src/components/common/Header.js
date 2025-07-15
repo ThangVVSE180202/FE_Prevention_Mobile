@@ -38,7 +38,7 @@ const Header = () => {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("BlogList")}>
             <Text style={styles.link}>Blog</Text>
-          </TouchableOpacity>   
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate("SurveyList")}>
             <Text style={styles.link}>Khảo sát</Text>
           </TouchableOpacity>
@@ -47,9 +47,18 @@ const Header = () => {
         {/* Login Info */}
         <View style={styles.rightSection}>
           {user ? (
-            <Text style={styles.welcomeText}>
-              Chào, {user.name || user.email}
-            </Text>
+            <View style={styles.userSection}>
+              <Text style={styles.welcomeText}>
+                Chào, {user.name || user.email}
+              </Text>
+              {/* Temporary Logout Button */}
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <>
               <TouchableOpacity onPress={() => navigation.navigate("Login")}>
@@ -113,6 +122,11 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
   },
+  userSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   welcomeText: {
     color: "#ffffff",
     fontSize: 14,
@@ -127,5 +141,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
     textDecorationLine: "underline",
+  },
+  logoutButton: {
+    backgroundColor: "#e53935",
+    borderRadius: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  logoutButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

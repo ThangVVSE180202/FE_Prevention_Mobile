@@ -1,6 +1,3 @@
-// 📚 Course Screens
-// All course-related screens
-
 export { default as CourseListScreen } from "./CourseListScreen";
 export { default as CourseDetailScreen } from "./CourseDetailScreen";
 export { default as CourseContentScreen } from "./CourseContentScreen";

@@ -9,11 +9,14 @@ import {
   FlatList,
   Dimensions,
   SafeAreaView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import Header from "../../components/common/Header";
 import { useAuth } from "../../context/AuthContext";
 import courseService from "../../services/api/courseService";
+import authService from "../../services/api/authService";
 
 // Ảnh hero slide
 import SupportImg from "../../../assets/images/supporthug.jpg";
@@ -126,9 +129,30 @@ const HomeScreen = () => {
     });
   };
 
+  const handleLogout = () => {
+    Alert.alert(
+      "Đăng xuất",
+      "Bạn có chắc chắn muốn đăng xuất không?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
+        },
+        {
+          text: "Đồng ý",
+          onPress: () => {
+            authService.logout();
+            navigation.navigate("Login");
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
-      <Header />
+      <Header onLogout={handleLogout} />
       <ScrollView style={styles.container}>
         {/* Hero Section */}
         <View style={styles.heroSection}>
