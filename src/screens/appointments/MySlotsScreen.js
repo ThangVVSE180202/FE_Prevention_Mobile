@@ -127,8 +127,7 @@ const MySlotsScreen = ({ navigation }) => {
         style: "destructive",
         onPress: async () => {
           try {
-            // Implement delete slot API call
-            // await appointmentService.deleteSlot(slotId);
+            await appointmentService.deleteSlot(slotId);
             Alert.alert("Thành công", "Đã xóa khung giờ");
             fetchMySlots();
           } catch (error) {
